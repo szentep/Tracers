@@ -1,12 +1,8 @@
 
 #include "TracersApp.h"
+#include <imgui.h>
 
 FALCOR_EXPORT_D3D12_AGILITY_SDK
-
-TracersApp::TracersApp(const SampleAppConfig& config) : SampleApp(config), camera(Camera::create("Main Camera")), fpCameraController(camera)
-{}
-
-TracersApp::~TracersApp() {}
 
 void TracersApp::onLoad(RenderContext* pRenderContext)
 {
@@ -53,6 +49,12 @@ void TracersApp::onFrameRender(RenderContext* pRenderContext, const ref<Fbo>& pT
     mpMainPass->execute(pRenderContext, pTargetFbo);
 }
 
+void TracersApp::onGuiRender(Gui* pGui)
+{
+    // complete gui
+    settings.renderUI(pGui);
+}
+
 void TracersApp::onResize(uint32_t width, uint32_t height)
 {
     mAspectRatio = (float(width) / float(height));
@@ -83,8 +85,8 @@ void TracersApp::resetCamera()
 static int runMain(int argc, char** argv)
 {
     SampleAppConfig config;
-    config.windowDesc.width = 1280;
-    config.windowDesc.height = 720;
+    config.windowDesc.width = ::Settings::windowWidth;
+    config.windowDesc.height = ::Settings::windowHeight;
     config.windowDesc.resizableWindow = true;
     config.windowDesc.enableVSync = true;
     config.windowDesc.title = "Tracers App";

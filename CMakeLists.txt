@@ -3,6 +3,10 @@ add_falcor_executable(Tracers)
 target_sources(Tracers PRIVATE
     TracersApp.h
     TracersApp.cpp
+    Settings.h
+    Settings.cpp
+
+    Utils/magic_enum.hpp
 )
 
 # add_subdirectory(Shaders)
