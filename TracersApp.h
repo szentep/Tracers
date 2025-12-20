@@ -10,7 +10,9 @@ using namespace Falcor;
 class TracersApp : public SampleApp
 {
 public:
-    TracersApp(const SampleAppConfig& config) : SampleApp(config), camera(Camera::create("Main Camera")), fpCameraController(camera) {};
+    TracersApp(const SampleAppConfig& config) : SampleApp(config), camera(Camera::create("Main Camera")), fpCameraController(camera) {
+        fpCameraController.setCameraSpeed(2.0);
+    };
     ~TracersApp() {};
 
     void onLoad(RenderContext* pRenderContext) override;

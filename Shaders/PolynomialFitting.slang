@@ -9,6 +9,8 @@
 #define POLYNOMIAL_FIT_DEGREE 1
 #endif
 
+#define BASIS_ID_BERNSTEIN 1
+
 // All functions below require a float EvalFunction(float t) function to be available. Usually,
 // this will be the f( p0 + t*v ) function value, implemented something like
 //

@@ -4,7 +4,10 @@ cbuffer PsCB
 {
     float2 iResolution;
     float iGlobalTime;
+    // camera
     float3 iEyePos;
+    float3 iEyeTarget;
+    float3 iEyeUp;
 };
 
 // --- Configuration Constants ---
@@ -12,7 +15,7 @@ cbuffer PsCB
 #define NORMAL_EPSILON 0.0001
 
 // Raymarching Control
-#define MAX_STEPS 1000
+#define MAX_STEPS 2000
 #define MAX_DIST (BOUNDING_SPHERE_RADIUS * 2.0)
 #define STEP_SIZE (MAX_DIST / MAX_STEPS)
 #define BINARY_SEARCH_ITERATIONS 8
@@ -64,6 +67,18 @@ float3 calculateNormalBarthSextic(float3 p, float valCenter)
 
 // --- Intersection Logic ---
 
+struct Ray
+{
+    float3 origin;
+    float3 dir;
+
+    // Get point along ray at distance dist
+    float3 at(float dist)
+    {
+        return origin + dir * dist;
+    }
+};
+
 /**
  * Ray-Sphere Intersection Test
  * Returns distance to intersection or -1.0 if no intersection. Inside the sphere returns 0.
@@ -72,9 +87,9 @@ float3 calculateNormalBarthSextic(float3 p, float valCenter)
  * s0: sphere center
  * sr: sphere radius
  */
-float raySphereIntersect(float3 ro, float3 rd, float3 s0, float sr) {
-    float3 s0_r0 = ro - s0;
-    float b = 2.0 * dot(rd, s0_r0);
+float raySphereIntersect(Ray r, float3 s0, float sr) {
+    float3 s0_r0 = r.origin - s0;
+    float b = 2.0 * dot(r.dir, s0_r0);
     float c = dot(s0_r0, s0_r0) - (sr * sr);
     float D = b * b - 4.0 * c;
     if (D < 0.0) {
@@ -88,7 +103,7 @@ float raySphereIntersect(float3 ro, float3 rd, float3 s0, float sr) {
 /**
  * Refines the hit location using the Bisection Method
  */
-float refineIntersection(float3 ro, float3 rd, float t, float lastStep)
+float refineIntersection(Ray ray, float t, float lastStep)
 {
     float tMin = t - lastStep;
     float tMax = t;
@@ -96,8 +111,7 @@ float refineIntersection(float3 ro, float3 rd, float t, float lastStep)
     for (int i = 0; i < BINARY_SEARCH_ITERATIONS; i++)
     {
         float tMid = (tMin + tMax) * 0.5;
-        float3 p = ro + rd * tMid;
-        float f_val = evaluateBarthSextic(p);
+        float f_val = evaluateBarthSextic(ray.at(tMid));
 
         // We assume the raymarch stopped past the boundary and positive is outside
         if (f_val < 0.0) tMin = tMid;
@@ -106,20 +120,21 @@ float refineIntersection(float3 ro, float3 rd, float t, float lastStep)
     return tMax;
 }
 
-float rayMarchScene(float3 ro, float3 rd, out bool hit)
+float rayMarchScene(Ray ray, out bool hit)
 {
     hit = false;
-    float dist = raySphereIntersect(ro, rd, float3(0.0), BOUNDING_SPHERE_RADIUS);
+    float dist = raySphereIntersect(ray, float3(0.0), BOUNDING_SPHERE_RADIUS);
     if (dist < 0.0) return 0.0; // No intersection with bounding sphere
     // Step to bounding sphere first for efficiency
     float dist0 = dist;
-    float f_val = evaluateBarthSextic(ro);
+    float f_val = evaluateBarthSextic(ray.origin);
     float prev_f = 0.0;
 
     for(int i = 0; i < MAX_STEPS; i++)
     {
         dist += STEP_SIZE;
-        float3 p = ro + rd * dist;
+        float3 p = ray.at(dist);
+        if (length(p) > BOUNDING_SPHERE_RADIUS) break;
         float f_val = evaluateBarthSextic(p);
 
         if (prev_f * f_val < 0.0) 
@@ -136,7 +151,7 @@ float rayMarchScene(float3 ro, float3 rd, out bool hit)
     // Optional: Refine the root if we hit
     if (hit)
     {
-        dist = refineIntersection(ro, rd, dist, STEP_SIZE);
+        dist = refineIntersection(ray, dist, STEP_SIZE);
     }
 
     return dist;
@@ -188,6 +203,26 @@ float3x3 rotateX(float angle)
     return float3x3(1, 0, 0, 0, c, -s, 0, s, c);
 }
 
+Ray generateRay(float2 uv)
+{
+    Ray ray;
+#ifdef ORBIT_CAMERA
+    float3 camPos = float3(0.0, 0.0, -3.0);
+    float3 rayDir = normalize(float3(uv, 1.5)); // 1.5 is the (FOV)
+    // Animation
+    float time = iGlobalTime * 0.2;
+    float3x3 camRot = rotateY(time); // mul(rotateY(time), rotateX(time * 0.7));
+    ray.origin = mul(camPos, camRot);
+    ray.dir = mul(rayDir, camRot);
+#else // camera setup from input parameters
+    ray.origin = iEyePos;
+    float3 eyeCenterDir = normalize(iEyeTarget - iEyePos);
+    float3 right = normalize(cross(eyeCenterDir, iEyeUp));
+    ray.dir = normalize(1.0 * eyeCenterDir - uv.y * iEyeUp + uv.x * right);
+#endif
+    return ray;
+}
+
 // --- Main ---
 
 float4 mainImage(float2 fragCoord)
@@ -196,24 +231,17 @@ float4 mainImage(float2 fragCoord)
     float2 uv = (fragCoord - 0.5 * iResolution) / iResolution.y;
 
     // Camera Setup
-    float3 camPos = iEyePos;
-    float3 rayDir = normalize(float3(uv, 1.5)); // 1.5 is the (FOV)
-    
-    // Animation
-    float time = iGlobalTime * 0.2;
-    float3x3 camRot = rotateY(time); // mul(rotateY(time), rotateX(time * 0.7));
-    camPos = mul(camPos, camRot);
-    rayDir = mul(rayDir, camRot);
+    Ray ray = generateRay(uv);
     
     // Raymarch
     bool hit;
-    float dist = rayMarchScene(camPos, rayDir, hit);
+    float dist = rayMarchScene(ray, hit);
     
     float3 finalColor = float3(0.1, 0.1, 0.15); // Background Color
     
     if(hit)
     {
-        float3 hitPos = camPos + rayDir * dist;
+        float3 hitPos = ray.at(dist);
         
         // Lighting Parameters
         float3 lightPos = float3(2.0, 5.0, -3.0);
@@ -226,7 +254,7 @@ float4 mainImage(float2 fragCoord)
         
         finalColor = CalculateBlinnPhong(
             hitPos, 
-            -rayDir, // View direction is ray direction
+            -ray.dir, // View direction is ray direction
             lightPos, 
             ambientCol, 
             diffuseCol, 

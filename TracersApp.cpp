@@ -33,19 +33,28 @@ void TracersApp::onLoad(RenderContext* pRenderContext)
 
 void TracersApp::onFrameRender(RenderContext* pRenderContext, const ref<Fbo>& pTargetFbo)
 {
+    auto PsCB = mpMainPass->getRootVar()["PsCB"];
     // iResolution
     float width = (float)pTargetFbo->getWidth();
     float height = (float)pTargetFbo->getHeight();
-    auto PsCB = mpMainPass->getRootVar()["PsCB"];
     PsCB["iResolution"] = float2(width, height);
     PsCB["iGlobalTime"] = (float)getGlobalClock().getTime();
-    PsCB["iEyePos"] = camera->getPosition();
-
-    // camera
+    // Camera
     fpCameraController.update();
     camera->beginFrame();
+    PsCB["iEyePos"] = camera->getPosition();
+    PsCB["iEyeTarget"] = camera->getTarget();
+    PsCB["iEyeUp"] = camera->getUpVector();
+    if (settings.cameraSettings.orbit)
+    {
+        mpMainPass->getProgram()->addDefine("ORBIT_CAMERA");
+    }
+    else
+    {
+        mpMainPass->getProgram()->removeDefine("ORBIT_CAMERA");
+    }
 
-    // run final pass
+    // run render pass
     mpMainPass->execute(pRenderContext, pTargetFbo);
 }
 
@@ -63,7 +72,10 @@ void TracersApp::onResize(uint32_t width, uint32_t height)
 bool TracersApp::onKeyEvent(const KeyboardEvent& keyEvent)
 {
     if (fpCameraController.onKeyEvent(keyEvent))
+    {
+        settings.cameraSettings.orbit = false;
         return true;
+    }
 
     return false;
 }
@@ -75,9 +87,8 @@ bool TracersApp::onMouseEvent(const MouseEvent& mouseEvent)
 
 void TracersApp::resetCamera()
 {
-    camera->setPosition({0.f, 0.f, -3.f});
-    camera->setTarget({0.f, 0.f, 0.f});
-    // camera->setTarget({-4.f, .7f, .5f}); // do not look at the surface
+    camera->setPosition(settings.cameraSettings.startPosition);
+    camera->setTarget(settings.cameraSettings.startTarget);
     camera->setNearPlane(0.001f);
     camera->beginFrame();
 }
