@@ -9,7 +9,12 @@
 #define POLYNOMIAL_FIT_DEGREE 1
 #endif
 
+#define BASIS_ID_MONOMIAL 0
 #define BASIS_ID_BERNSTEIN 1
+
+#ifndef SELECTED_BASIS
+#define SELECTED_BASIS BASIS_ID_MONOMIAL
+#endif
 
 // All functions below require a float EvalFunction(float t) function to be available. Usually,
 // this will be the f( p0 + t*v ) function value, implemented something like
@@ -472,16 +477,16 @@ float GetNode(int i, int degree) {
 // degree POLYNOMIAL_FIT_DEGREE polynomial fit to a collection of samples.
 float GetFittingCoefficient(int i, int j)
 {
-#if USE_BERNSTEIN_BASIS || SELECTED_BASIS == BASIS_ID_BERNSTEIN
+#if SELECTED_BASIS == BASIS_ID_BERNSTEIN
     return BernsteinChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
 #else // Monomial basis
-    return MonomialChebyshevFitting[ fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * ( POLYNOMIAL_FIT_DEGREE + 1 ) + j ];
+    return MonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
 #endif
 }
 
 float GetFittingCoefficient(int i, int j, int degree)
 {
-#if USE_BERNSTEIN_BASIS || SELECTED_BASIS == BASIS_ID_BERNSTEIN
+#if SELECTED_BASIS == BASIS_ID_BERNSTEIN
     return BernsteinChebyshevFitting[fittingOffsetArray[degree - 1] + i * (degree + 1) + j];
 #else // Monomial basis
     return MonomialChebyshevFitting[fittingOffsetArray[degree - 1] + i * (degree + 1) + j];

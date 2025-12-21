@@ -33,7 +33,8 @@ void TracersApp::onLoad(RenderContext* pRenderContext)
 
 void TracersApp::onFrameRender(RenderContext* pRenderContext, const ref<Fbo>& pTargetFbo)
 {
-    auto PsCB = mpMainPass->getRootVar()["PsCB"];
+    auto vars = mpMainPass->getRootVar();
+    auto PsCB = vars["PsCB"];
     // iResolution
     float width = (float)pTargetFbo->getWidth();
     float height = (float)pTargetFbo->getHeight();
@@ -53,6 +54,9 @@ void TracersApp::onFrameRender(RenderContext* pRenderContext, const ref<Fbo>& pT
     {
         mpMainPass->getProgram()->removeDefine("ORBIT_CAMERA");
     }
+
+    // Upload settings
+    settings.uploadData(mpMainPass->getRootVar());
 
     // run render pass
     mpMainPass->execute(pRenderContext, pTargetFbo);

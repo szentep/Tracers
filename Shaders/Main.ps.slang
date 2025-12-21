@@ -1,4 +1,5 @@
 #include "PolynomialFitting.slang"
+#include "Lights.slang"
 
 cbuffer PsCB
 {
@@ -52,8 +53,9 @@ float evaluateBarthSextic(float3 p)
 /**
  * Calculates the surface normal using Forward Differences
  */
-float3 calculateNormalBarthSextic(float3 p, float valCenter)
+float3 calculateNormalBarthSextic(float3 p)
 {
+    float valCenter = evaluateBarthSextic(p);
     float2 h = float2(NORMAL_EPSILON, 0.0);
     
     // Gradient ~ [f(x+h)-f(x), f(y+h)-f(y), f(z+h)-f(z)]
@@ -159,33 +161,7 @@ float rayMarchScene(Ray ray, out bool hit)
 
 // --- Shading ---
 
-float3 CalculateBlinnPhong(
-    float3 p, 
-    float3 viewDir, 
-    float3 lightPos, 
-    float3 colAmbient, 
-    float3 colDiffuse, 
-    float3 colSpecular, 
-    float shininess)
-{
-    // Re-evaluate center for accurate normal calculation
-    float val = evaluateBarthSextic(p);
-    float3 n = calculateNormalBarthSextic(p, val);
 
-    // If the normal points away from camera flip it.
-    // if (dot(n, viewDir) > 0.0) n = -n;
-    
-    float3 lightDir = normalize(lightPos - p);
-    
-    // Diffuse
-    float diff = max(dot(n, lightDir), 0.0);
-    
-    // Specular
-    float3 halfVec = normalize(lightDir - viewDir);
-    float spec = pow(max(dot(n, halfVec), 0.0), shininess);
-    
-    return colAmbient + (colDiffuse * diff) + (colSpecular * spec);
-}
 
 // --- Camera Tools ---
 
@@ -242,25 +218,11 @@ float4 mainImage(float2 fragCoord)
     if(hit)
     {
         float3 hitPos = ray.at(dist);
-        
-        // Lighting Parameters
-        float3 lightPos = float3(2.0, 5.0, -3.0);
-        
-        // Gold/Yellowish Palette
-        float3 ambientCol = float3(.05, .02, .01);
-        float3 diffuseCol = float3(.7, .5, .1);
-        float3 specCol    = float3(.9);
-        float shininess   = 64.;
-        
-        finalColor = CalculateBlinnPhong(
-            hitPos, 
-            -ray.dir, // View direction is ray direction
-            lightPos, 
-            ambientCol, 
-            diffuseCol, 
-            specCol, 
-            shininess
-        );
+
+        // Normal calculation
+        float3 normal = calculateNormalBarthSextic(hitPos);
+
+        finalColor = CalculateBlinnPhong(hitPos, normal, -ray.dir); // View direction is ray direction
     }
 
     // Gamma Correction
