@@ -1,6 +1,14 @@
 #include "PolynomialFitting.slang"
 #include "Lights.slang"
 
+// Render mode
+#define DIRECT_RAYTRACE 0
+#define POLYNOMIAL_FITTING_RAYTRACE 1
+
+#ifndef RENDER_MODE
+#define RENDER_MODE DIRECT_RAYTRACE
+#endif
+
 cbuffer PsCB
 {
     float2 iResolution;
@@ -159,10 +167,6 @@ float rayMarchScene(Ray ray, out bool hit)
     return dist;
 }
 
-// --- Shading ---
-
-
-
 // --- Camera Tools ---
 
 float3x3 rotateY(float angle)
@@ -208,20 +212,22 @@ float4 mainImage(float2 fragCoord)
 
     // Camera Setup
     Ray ray = generateRay(uv);
-    
-    // Raymarch
+
     bool hit;
+
+#if RENDER_MODE == DIRECT_RAYTRACE // Raymarch the scene directly
     float dist = rayMarchScene(ray, hit);
+#elif RENDER_MODE == POLYNOMIAL_FITTING_RAYTRACE // Use Polynomial Fitting Raytracer
+    hit = false;
+    float dist = 0.0;
+#endif
     
     float3 finalColor = float3(0.1, 0.1, 0.15); // Background Color
     
     if(hit)
     {
         float3 hitPos = ray.at(dist);
-
-        // Normal calculation
         float3 normal = calculateNormalBarthSextic(hitPos);
-
         finalColor = CalculateBlinnPhong(hitPos, normal, -ray.dir); // View direction is ray direction
     }
 

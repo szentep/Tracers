@@ -56,7 +56,7 @@ void TracersApp::onFrameRender(RenderContext* pRenderContext, const ref<Fbo>& pT
     }
 
     // Upload settings
-    settings.uploadData(mpMainPass->getRootVar());
+    settings.uploadData(mpMainPass->getRootVar(), mpMainPass->getProgram());
 
     // run render pass
     mpMainPass->execute(pRenderContext, pTargetFbo);

@@ -1,6 +1,19 @@
 #pragma once
 #include "Falcor.h"
 #include <imgui.h>
+#include "Utils/magic_enum.hpp"
+
+enum class RenderMode
+{
+    DIRECT_RAYTRACE = 0,             // Direct raytracing on the function
+    POLYNOMIAL_FITTING_RAYTRACE = 1, // Raytracing on the polynomial fitting of the function
+};
+
+enum class FittingBasis
+{
+    MONOMIAL = 0,  // Monomial basis
+    BERNSTEIN = 1, // Bernstein basis
+};
 
 class Settings
 {
@@ -12,8 +25,12 @@ public:
 
     void renderUI(Gui* pGui);
 
-    void uploadData(const Falcor::ShaderVar& vars);
-    void uploadLightData(const Falcor::ShaderVar& vars);
+    void uploadData(const Falcor::ShaderVar& vars, Falcor::ref<Falcor::Program> program) const;
+    void uploadLightData(const Falcor::ShaderVar& vars) const;
+    void addDefines(Falcor::ref<Falcor::Program> program) const;
+
+    RenderMode renderMode = RenderMode::DIRECT_RAYTRACE;
+    FittingBasis selectedBasis = FittingBasis::MONOMIAL;
 
     const static uint32_t windowWidth = 1280;
     const static uint32_t windowHeight = 720;
@@ -35,9 +52,31 @@ public:
     } lightingSettings;
 
 private:
+    void renderProgramUI(Gui* pGui);
     void renderCameraUI(Gui* pGui);
     void renderShadingUI(Gui* pGui);
 
     Falcor::uint2 guiSize = {300, 720};
     Falcor::uint2 guiPos = {0, 0};
+
+    // Draw an ImGui combo box for selecting enum values using magic_enum
+    template<typename T>
+    void imGuiEnumSelector(const char* label, T& selected_value)
+    {
+        static_assert(std::is_enum_v<T>, "T must be an enum");
+
+        std::string current_name = std::string(magic_enum::enum_name(selected_value));
+
+        if (ImGui::BeginCombo(label, current_name.c_str()))
+        {
+            for (auto& [value, name] : magic_enum::enum_entries<T>())
+            {
+                if (ImGui::Selectable(name.data(), selected_value == value))
+                {
+                    selected_value = value;
+                }
+            }
+            ImGui::EndCombo();
+        }
+    }
 };

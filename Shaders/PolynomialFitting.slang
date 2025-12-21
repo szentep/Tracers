@@ -9,6 +9,7 @@
 #define POLYNOMIAL_FIT_DEGREE 1
 #endif
 
+// Basis function for polynomial fitting
 #define BASIS_ID_MONOMIAL 0
 #define BASIS_ID_BERNSTEIN 1
 
