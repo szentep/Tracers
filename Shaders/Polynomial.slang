@@ -41,24 +41,20 @@
 void TwoSum(float a, float b, out float s, out float e)
 {
     // 'precise' prevents the compiler from optimizing (s - a) -> b
-    precise float sum = a + b;
-    precise float v = sum - a;
-    precise float e_a = sum - v;
-    s = sum;
-    precise float err = (a - e_a) + (b - v);
-    e = err;
+    precise s = a + b;
+    precise float v = s - a;
+    precise float e_a = s - v;
+    precise e = (a - e_a) + (b - v);
 }
 
 // Computes p = fl(a * b) and error e using FMA.
 void TwoProduct(float a, float b, out float p, out float e)
 {
-    precise float prod = a * b;
-    p = prod;
+    precise p = a * b;
     
     // fma(a, b, c) = (a * b) + c computed with infinite precision, then rounded.
     // This isolates the rounding error of the multiplication.
-    precise float err = fma(a, b, -prod);
-    e = err;
+    precise e = mad(a, b, -p);
 }
 
 struct Polynomial
@@ -108,7 +104,7 @@ struct Polynomial
 
             // Accumulate correction term
             // We use standard ops here as this is the lower-significance part
-            c = c * t + (pi + sigma);
+            c = mad(c, t, pi + sigma);
         }
 
         return s + c;
