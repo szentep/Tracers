@@ -2,9 +2,8 @@
 
 Settings::Settings() {}
 
-void Settings::renderUI(Gui* pGui) {
-    Falcor::Gui::Window w(pGui, "Settings", guiSize, guiPos);
-
+void Settings::renderUI(Gui* pGui)
+{
     renderProgramUI(pGui);
     renderCameraUI(pGui);
     renderShadingUI(pGui);
@@ -27,9 +26,11 @@ void Settings::uploadLightData(const Falcor::ShaderVar& vars) const
 
 void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
 {
-    program->addDefine("POLYNOMIAL_FIT_DEGREE", std::to_string(6));
+    program->addDefine("POLYNOMIAL_FIT_DEGREE", std::to_string(6)); // TODO change with scene
     program->addDefine("RENDER_MODE", std::to_string(magic_enum::enum_integer(renderMode)));
     program->addDefine("SELECTED_BASIS", std::to_string(magic_enum::enum_integer(selectedBasis)));
+    program->addDefine("EVALUATION_SCHEME_MONOMIAL", std::to_string(magic_enum::enum_integer(evalSchemeMonomial)));
+    program->addDefine("NODE_TYPE_FOR_FITTING", std::to_string(magic_enum::enum_integer(nodeType)));
 }
 
 void Settings::renderProgramUI(Gui* pGui)
@@ -38,8 +39,17 @@ void Settings::renderProgramUI(Gui* pGui)
     if (programGroup.open())
     {
         imGuiEnumSelector("Render Mode", renderMode);
-        // imGuiEnumSelector("Fitting Basis", selectedBasis);
+        if (renderMode == RenderMode::POLYNOMIAL_FITTING_RAYTRACE)
+        {
+            imGuiEnumSelector("Node Type", nodeType);
 
+            // imGuiEnumSelector("Fitting Basis", selectedBasis); // TODO support bernstein basis
+            if (selectedBasis == FittingBasis::MONOMIAL)
+            {
+                imGuiEnumSelector("Eval.Sceme", evalSchemeMonomial);
+            }
+        }
+        
         programGroup.release();
     }
 }

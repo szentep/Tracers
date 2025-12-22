@@ -1,6 +1,8 @@
 #ifndef POLYNOMIAL_FITTING
 #define POLYNOMIAL_FITTING
 
+#include "Polynomial.slang"
+
 //
 // Utility functions to handle Polynomial fitting
 //
@@ -10,12 +12,29 @@
 #endif
 
 // Basis function for polynomial fitting
+#ifndef BASIS_ID_MONOMIAL
 #define BASIS_ID_MONOMIAL 0
+#endif
+#ifndef BASIS_ID_BERNSTEIN
 #define BASIS_ID_BERNSTEIN 1
+#endif
 
 #ifndef SELECTED_BASIS
 #define SELECTED_BASIS BASIS_ID_MONOMIAL
 #endif
+
+// Type of nodes to use for fitting
+#ifndef CHEBYSHEV_NODES
+#define CHEBYSHEV_NODES 0
+#endif
+#ifndef NORMALIZED_CHEBYSHEV_NODES
+#define NORMALIZED_CHEBYSHEV_NODES 1
+#endif
+
+#ifndef NODE_TYPE_FOR_FITTING
+#define NODE_TYPE_FOR_FITTING NORMALIZED_CHEBYSHEV_NODES
+#endif
+
 
 // All functions below require a float EvalFunction(float t) function to be available. Usually,
 // this will be the f( p0 + t*v ) function value, implemented something like
@@ -30,12 +49,13 @@
 #endif
 
 // The maximum degree of fitting - requesting higher should lead to assertion
-#define MAX_DEGREE_IMPLEMENTED 16
+#define MAX_DEGREE_IMPLEMENTED 6 // TODO make generator code faster and increase back to 16
+
 
 // offset into the fitting matrices, common form (that does not take into account the
 // special handling of first or first and last coefficients in monomial and Bernstein basis)
 // Index 0 is degree 1 and so on.
-static const int fittingOffsetArray[] = { 0, 4, 13, 29, 54, 90, 139, 203, 284, 384, 505, 649, 818, 1014, 1239, 1495, };
+static const int fittingOffsetArray[] = { 0, 4, 13, 29, 54, 90, 139, 203, 284, 384, 505, 649, 818, 1014, 1239, 1495};
 
 // Fitting matrix stored for the b_1, ..., b_{n-1} control points. The first and last, i.e.
 // b_0 and b_n are trivial, as they coincide with the corresponding function samples. The
@@ -43,7 +63,7 @@ static const int fittingOffsetArray[] = { 0, 4, 13, 29, 54, 90, 139, 203, 284, 3
 // Note that these matrices need not be stored entirely, we can halve storage by noting the
 // symmetry in the coefficients.
 // Bernstein basis using Chebyshev nodes.
-static const float BernsteinChebyshevFitting[] =
+static const float NormalizedBernsteinChebyshevFitting[] =
 {
     // Degree 1, offset 0, length 0
     1.0, 0.0,
@@ -213,46 +233,45 @@ static const float BernsteinChebyshevFitting[] =
     1.291666666666206, -2.6082298600929863, 2.6848603087564427, -2.8193748479169485, 3.0232130922920093, -3.315275101083904, 3.7259320943151244, -4.3044580949028015, 5.133333333333094, -6.357452409759868, 8.248613391149817, -11.362864104499002, 16.97678690770768, -28.507757749071505, 56.80726087244469, -90.05792116600493, 52.441666666666926,
     -0.06249999999997777, 0.12621256956686425, -0.12994576623703089, 0.1365024013069077, -0.14644660940669152, 0.16071276930689554, -0.1808078365214361, 0.20918920971447996, -0.24999999999998898, 0.31059385523378874, -0.40497860110545103, 0.5625185767789342, -0.8535533905932952, 1.4834120031148579, -3.2842677961360582, 13.010858614977208, -9.687500000000009,
     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-
 };
 
 // Fitting in the monomial power bases using Chebyshev nodes
 // Monomial basis using Chebyshev nodes.
-static const float MonomialChebyshevFitting[] =
+static const float NormalizedMonomialChebyshevFitting[] =
 {
-    // Degree 1, offset 0, length 0
+    // Degree 1, offset 0
     1.0, 0.0,
     -1.0, 1.0,
-    // Degree 2, offset 4, length 3
+    // Degree 2, offset 4
     1.0, 0.0, 0.0,
-    -3.0, 4.0, -0.9999999999999998,
-    2.0, -4.0, 1.9999999999999998,
-    // Degree 3, offset 13, length 4
+    -3.0, 4.0, -1.0,
+    2.0, -4.0, 2.0,
+    // Degree 3, offset 13
     1.0, 0.0, 0.0, 0.0,
-    -6.333333333333333, 8.0, -2.666666666666666, 0.9999999999999991,
-    10.666666666666664, -18.666666666666664, 13.333333333333329, -5.333333333333329,
-    -5.333333333333331, 10.666666666666664, -10.666666666666663, 5.3333333333333295,
-    // Degree 4, offset 29, length 10
+    -6.333333333333333, 8.0, -2.6666666666666665, 1.0,
+    10.666666666666666, -18.666666666666668, 13.333333333333334, -5.333333333333333,
+    -5.333333333333333, 10.666666666666666, -10.666666666666666, 5.333333333333333,
+    // Degree 4, offset 29
     1.0, 0.0, 0.0, 0.0, 0.0,
-    -10.999999999999993, 13.656854249492376, -4.0, 2.3431457505076203, -0.9999999999999982,
-    33.999999999999986, -56.97056274847713, 35.999999999999986, -23.029437251522847, 9.999999999999993,
-    -39.99999999999999, 75.31370849898475, -63.99999999999998, 52.68629150101521, -23.999999999999986,
-    16.0, -32.0, 31.999999999999993, -31.999999999999986, 15.999999999999991,
-    // Degree 5, offset 54, length 12
+    -11.0, 13.65685424949238, -4.0, 2.34314575050762, -1.0,
+    34.0, -56.97056274847714, 36.0, -23.02943725152286, 10.0,
+    -40.0, 75.31370849898477, -64.0, 52.68629150101524, -24.0,
+    16.0, -32.0, 32.0, -32.0, 16.0,
+    // Degree 5, offset 54
     1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    -17.000000000000043, 20.94427190999926, -5.788854381999954, 3.0557280900009474, -2.2111456180002804, 1.000000000000039,
-    83.2000000000011, -136.72135954999794, 81.65510696599972, -47.27864045000582, 35.14489303400368, -16.000000000000714,
-    -169.60000000000431, 310.79875775200213, -245.28792269600243, 182.00124224801218, -145.11207730401026, 67.20000000000269,
-    153.6000000000059, -297.4216701120085, 271.82167011200704, -240.17832988801106, 214.57832988801024, -102.40000000000364,
-    -51.200000000002646, 102.40000000000502, -102.40000000000438, 102.40000000000376, -102.40000000000339, 51.20000000000163,
-    // Degree 6, offset 90, length 21
+    -17.0, 20.94427190999916, -5.7888543819998315, 3.0557280900008412, -2.211145618000168, 1.0,
+    83.2, -136.72135954999578, 81.65510696599782, -47.278640450004204, 35.14489303400219, -16.0,
+    -169.6, 310.79875775199395, -245.2879226959953, 182.00124224800606, -145.1120773040047, 67.2,
+    153.6, -297.4216701119973, 271.8216701119973, -240.17832988800268, 214.57832988800268, -102.4,
+    -51.2, 102.4, -102.4, 102.4, -102.4, 51.2,
+    // Degree 6, offset 90
     1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    -24.333333333332803, 29.856406460550033, -7.999999999999034, 3.9999999999990905, -2.6666666666658045, 2.143593539448233, -0.9999999999996447,
-    172.6666666666539, -280.8033871712339, 162.66666666664315, -89.33333333331234, 61.333333333314414, -49.863279495391026, 23.333333333325,
-    -533.3333333332621, 963.3161507460522, -730.6666666665375, 511.99999999988404, -378.66666666656266, 316.6838492537143, -149.3333333332874,
-    810.6666666665047, -1542.8375056143793, 1343.9999999997083, -1109.3333333330716, 917.333333333099, -803.829161051758, 383.9999999998966,
-    -597.3333333331715, 1171.8016689122298, -1109.3333333330424, 1023.9999999997393, -938.6666666664335, 876.1983310872422, -426.66666666656386,
-    170.66666666660774, -341.33333333321883, 341.3333333332275, -341.33333333323856, 341.33333333324856, -341.3333333332557, 170.6666666666293,
+    -24.333333333333332, 29.856406460551018, -8.0, 4.0, -2.6666666666666665, 2.1435935394489816, -1.0,
+    172.66666666666666, -280.80338717125846, 162.66666666666666, -89.33333333333333, 61.333333333333336, -49.86327949540818, 23.333333333333332,
+    -533.3333333333334, 963.3161507461905, -730.6666666666666, 512.0, -378.6666666666667, 316.68384925380957, -149.33333333333334,
+    810.6666666666666, -1542.8375056146938, 1344.0, -1109.3333333333333, 917.3333333333334, -803.8291610519728, 384.0,
+    -597.3333333333334, 1171.8016689125443, -1109.3333333333333, 1024.0, -938.6666666666666, 876.1983310874558, -426.6666666666667,
+    170.66666666666666, -341.3333333333333, 341.3333333333333, -341.3333333333333, 341.3333333333333, -341.3333333333333, 170.66666666666666,
     // Degree 7, offset 139, length 24
     1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     -33.000000000000966, 40.391338716180485, -10.623882220847122, 5.144833056863888, -3.271927611952165, 2.4638282269602882, -2.1041901672048198, 1.0000000000005969,
@@ -388,26 +407,64 @@ static const float MonomialChebyshevFitting[] =
     2206204626.907432, -4401461063.436314, 4369182572.993507, -4317228142.767051, 4248213822.1782517, -4165522508.3763175, 4073062698.493241, -3975007042.5963597, 3875537681.4167953, -3778622513.813549, 3687840585.3784847, -3606266676.592139, 3536416156.4009204, -3480242626.7968006, 3439174091.380669, -3414169322.189084, 1702887661.418313,
     -570425553.5529736, 1139561624.502558, -1135742730.8941193, 1129541184.6095397, -1121195308.4042706, 1111025830.9006045, -1099423560.94833, 1086834368.600695, -1073742050.1468108, 1060649735.9456165, -1048060555.570948, 1036458303.1279802, -1026288845.5901481, 1017942988.5511376, -1011741457.8613495, 1007922574.3338289, -503316547.6030114,
     67108891.34814431, -134217782.09377182, 134217780.32228082, -134217777.49774748, 134217773.8316722, -134217769.63136622, 134217765.26014382, -134217761.06234044, 134217757.29201317, -134217754.08292064, 134217751.46441868, -134217749.40050346, 134217747.82751894, -134217746.6792747, 134217745.8998262, -134217745.44840994, 67108872.65031669,
+};
 
+// Fitting in the monomial power bases using Chebyshev nodes
+// Monomial basis using Chebyshev nodes.
+static const float MonomialChebyshevFitting[] =
+{
+    // Degree 1, offset 0
+    0.5, 0.5,
+    -0.5, 0.5,
+    // Degree 2, offset 4
+    0.0, 1.0, 0.0,
+    -0.5, 0.0, 0.5,
+    0.5, -1.0, 0.5,
+    // Degree 3, offset 13
+    -0.16666666666666666, 0.6666666666666666, 0.6666666666666666, -0.16666666666666666,
+    0.16666666666666666, -1.3333333333333333, 1.3333333333333333, -0.16666666666666666,
+    0.6666666666666666, -0.6666666666666666, -0.6666666666666666, 0.6666666666666666,
+    -0.6666666666666666, 1.3333333333333333, -1.3333333333333333, 0.6666666666666666,
+    // Degree 4, offset 29
+    0.0, 0.0, 1.0, 0.0, 0.0,
+    0.5, -1.4142135623730951, 0.0, 1.4142135623730951, -0.5,
+    -0.5, 2.0, -3.0, 2.0, -0.5,
+    -1.0, 1.4142135623730951, 0.0, -1.4142135623730951, 1.0,
+    1.0, -2.0, 2.0, -2.0, 1.0,
+    // Degree 5, offset 54
+    0.1, -0.24721359549995794, 0.6472135954999579, 0.6472135954999579, -0.24721359549995794, 0.1,
+    -0.1, 0.3055728090000841, -2.094427190999916, 2.094427190999916, -0.3055728090000841, 0.1,
+    -1.2, 2.83606797749979, -1.6360679774997897, -1.6360679774997897, 2.83606797749979, -1.2,
+    1.2, -3.505572809000084, 5.294427190999916, -5.294427190999916, 3.505572809000084, -1.2,
+    1.6, -2.5888543819998318, 0.9888543819998318, 0.9888543819998318, -2.5888543819998318, 1.6,
+    -1.6, 3.2, -3.2, 3.2, -3.2, 1.6,
+    // Degree 6, offset 90
+    0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+    -0.5, 1.1547005383792515, -2.0, 0.0, 2.0, -1.1547005383792515, 0.5,
+    0.5, -1.3333333333333333, 4.0, -6.333333333333333, 4.0, -1.3333333333333333, 0.5,
+    2.6666666666666665, -5.773502691896257, 4.666666666666667, 0.0, -4.666666666666667, 5.773502691896257, -2.6666666666666665,
+    -2.6666666666666665, 6.666666666666667, -9.333333333333334, 10.666666666666666, -9.333333333333334, 6.666666666666667, -2.6666666666666665,
+    -2.6666666666666665, 4.618802153517006, -2.6666666666666665, 0.0, 2.6666666666666665, -4.618802153517006, 2.6666666666666665,
+    2.6666666666666665, -5.333333333333333, 5.333333333333333, -5.333333333333333, 5.333333333333333, -5.333333333333333, 2.6666666666666665,
 };
 
 // Degree 1 to 10 nodes start at these indices in the chebyshevNodes / uniformNodes arrays
-static const int nodeOffsetArray[] = { 0,   2,   5,   9,   14,  20,  27,  35,  44,  54,  65,  77,  90,  104, 119, 135, 152, 170, 189, 209, 230, 252, 275, 299, 324, 350, 377, 405, 434, 464, 495, 527};
+static const int nodeOffsetArray[] = { 0, 2, 5, 9, 14, 20, 27, 35, 44, 54, 65, 77, 90, 104, 119, 135, 152, 170, 189, 209, 230, 252, 275, 299, 324, 350, 377, 405, 434, 464, 495, 527};
 
-static const float chebyshevNodes[] =
+static const float NormalizedChebyshevNodes[] =
 {
     // Degree 1 Chebyshev nodes, offset 0
     0.0, 1.0,
     // Degree 2 Chebyshev nodes, offset 2
-    0.0, 0.49999999999999994, 1.0,
+    0.0, 0.5, 1.0,
     // Degree 3 Chebyshev nodes, offset 5
-    0.0, 0.24999999999999994, 0.7499999999999999, 1.0,
+    0.0, 0.25, 0.75, 1.0,
     // Degree 4 Chebyshev nodes, offset 9
-    0.0, 0.1464466094067262, 0.49999999999999994, 0.8535533905932737, 1.0,
+    0.0, 0.14644660940672624, 0.5, 0.8535533905932737, 1.0,
     // Degree 5 Chebyshev nodes, offset 14
-    0.0, 0.09549150281252627, 0.3454915028125263, 0.6545084971874737, 0.9045084971874737, 1.0,
+    0.0, 0.09549150281252629, 0.3454915028125263, 0.6545084971874737, 0.9045084971874737, 1.0,
     // Degree 6 Chebyshev nodes, offset 20
-    0.0, 0.06698729810778065, 0.24999999999999994, 0.49999999999999994, 0.7499999999999999, 0.9330127018922194, 1.0,
+    0.0, 0.06698729810778067, 0.25, 0.5, 0.75, 0.9330127018922193, 1.0,
     // Degree 7 Chebyshev nodes, offset 27
     0.0, 0.04951556604879043, 0.1882550990706332, 0.3887395330218428, 0.6112604669781572, 0.8117449009293667, 0.9504844339512095, 1.0,
     // Degree 8 Chebyshev nodes, offset 35
@@ -462,16 +519,32 @@ static const float chebyshevNodes[] =
     0.0, 0.0024076366639015356, 0.009607359798384785, 0.021529832133895588, 0.03806023374435663, 0.059039367825822475, 0.08426519384872738, 0.1134947733186315, 0.1464466094067262, 0.18280335791817726, 0.22221488349019886, 0.2643016315870011, 0.3086582838174551, 0.35485766137276886, 0.40245483899193585, 0.4509914298352196, 0.49999999999999994, 0.5490085701647803, 0.5975451610080641, 0.645142338627231, 0.6913417161825448, 0.7356983684129988, 0.777785116509801, 0.8171966420818226, 0.8535533905932737, 0.8865052266813684, 0.9157348061512727, 0.9409606321741775, 0.9619397662556434, 0.9784701678661044, 0.9903926402016152, 0.9975923633360984, 1.0,
 };
 
+static const float ChebyshevNodes[] =
+{
+    // Degree 1 Chebyshev nodes, offset 0
+    -1.0, 1.0,
+    // Degree 2 Chebyshev nodes, offset 2
+    -1.0, 0.0, 1.0,
+    // Degree 3 Chebyshev nodes, offset 5
+    -1.0, -0.5, 0.5, 1.0,
+    // Degree 4 Chebyshev nodes, offset 9
+    -1.0, -0.7071067811865476, 0.0, 0.7071067811865476, 1.0,
+    // Degree 5 Chebyshev nodes, offset 14
+    -1.0, -0.8090169943749475, -0.30901699437494745, 0.30901699437494745, 0.8090169943749475, 1.0,
+    // Degree 6 Chebyshev nodes, offset 20
+    -1.0, -0.8660254037844386, -0.5, 0.0, 0.5, 0.8660254037844386, 1.0,
+};
+
 float GetNode(int i)
 {
 #if POLYNOMIAL_FIT_DEGREE > MAX_DEGREE_IMPLEMENTED
     #error Cannot implement fitting and queries as the requested degree is higher than what is implemented.
 #endif
-    return chebyshevNodes[nodeOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i];
-}
-
-float GetNode(int i, int degree) {
-    return chebyshevNodes[nodeOffsetArray[degree - 1] + i];
+#if NODE_TYPE_FOR_FITTING == NORMALIZED_CHEBYSHEV_NODES
+    return NormalizedChebyshevNodes[nodeOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i];
+#elif NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
+    return ChebyshevNodes[nodeOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i];
+#endif
 }
 
 // Convenience function to retrive the j-th sample's weight when computing the i-th
@@ -479,43 +552,30 @@ float GetNode(int i, int degree) {
 float GetFittingCoefficient(int i, int j)
 {
 #if SELECTED_BASIS == BASIS_ID_BERNSTEIN
-    return BernsteinChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
+    return NormalizedBernsteinChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
 #else // Monomial basis
-    return MonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
+    #if NODE_TYPE_FOR_FITTING == NORMALIZED_CHEBYSHEV_NODES
+        return NormalizedMonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
+    #elif NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
+        return MonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
+    #endif
 #endif
 }
 
-float GetFittingCoefficient(int i, int j, int degree)
+Polynomial interpolate_polynomial(float samples[POLYNOMIAL_FIT_DEGREE + 1], int degree = POLYNOMIAL_FIT_DEGREE)
 {
-#if SELECTED_BASIS == BASIS_ID_BERNSTEIN
-    return BernsteinChebyshevFitting[fittingOffsetArray[degree - 1] + i * (degree + 1) + j];
-#else // Monomial basis
-    return MonomialChebyshevFitting[fittingOffsetArray[degree - 1] + i * (degree + 1) + j];
-#endif
-}
-
-// We use a scope-guard to make a local array for the evaluation
-#define DE_CASTELJAU(result, N, b, t) 								\
-{																	\
-    float q[N+1];													\
-    for (int k = 0; k <= N; ++k) q[k] = b[k];						\
-    for (int k = 1; k <= N; ++k )									\
-    {																\
-        for (int l = 0; l <= N - k; ++l)	\
-        {															\
-            q[l] = lerp(q[l], q[l+1], t);						    \
-        }															\
-    }																\
-    result = q[0];											        \
-}
-
-#define HORNER(result, N, a, x)			\
-{										\
-	result = a[N];						\
-	for (int kk=N-1; kk>=0; --kk)		\
-	{									\
-		result = a[kk] + x * result;	\
-	}									\
+    Polynomial p;
+    [[unroll]]
+    for (int i = 0; i <= degree; ++i)
+    {
+        p.coeffs[i] = 0.0;
+        [[unroll]]
+        for (int j = 0; j <= degree; ++j)
+        {
+            p.coeffs[i] += GetFittingCoefficient(i, j) * samples[j];
+        }
+    }
+    return p;
 }
 
 #endif // POLYNOMIAL_FITTING

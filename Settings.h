@@ -15,6 +15,18 @@ enum class FittingBasis
     BERNSTEIN = 1, // Bernstein basis
 };
 
+enum class EvaluationScemeMonomial
+{
+    HORNER = 0,      // Horner's method
+    COMPENSATED_HORNER = 1, // Compensated Horner's method
+};
+
+enum class NodeType
+{
+    CHEBYSHEV = 0,  // Chebyshev nodes on [-1,1]
+    NORMALIZED_CHEBYSHEV = 1, // Chebyshev nodes normalized to [0,1]
+};
+
 class Settings
 {
     using Gui = Falcor::Gui;
@@ -29,11 +41,16 @@ public:
     void uploadLightData(const Falcor::ShaderVar& vars) const;
     void addDefines(Falcor::ref<Falcor::Program> program) const;
 
-    RenderMode renderMode = RenderMode::DIRECT_RAYTRACE;
+    RenderMode renderMode = RenderMode::POLYNOMIAL_FITTING_RAYTRACE;
     FittingBasis selectedBasis = FittingBasis::MONOMIAL;
+    EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::HORNER;
+    NodeType nodeType = NodeType::CHEBYSHEV;
 
     const static uint32_t windowWidth = 1280;
     const static uint32_t windowHeight = 720;
+
+    Falcor::uint2 guiSize = {300, windowHeight - 150};
+    Falcor::uint2 guiPos = {0, 0};
 
     struct CameraSettings
     {
@@ -55,9 +72,6 @@ private:
     void renderProgramUI(Gui* pGui);
     void renderCameraUI(Gui* pGui);
     void renderShadingUI(Gui* pGui);
-
-    Falcor::uint2 guiSize = {300, 720};
-    Falcor::uint2 guiPos = {0, 0};
 
     // Draw an ImGui combo box for selecting enum values using magic_enum
     template<typename T>

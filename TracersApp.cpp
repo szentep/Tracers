@@ -64,6 +64,8 @@ void TracersApp::onFrameRender(RenderContext* pRenderContext, const ref<Fbo>& pT
 
 void TracersApp::onGuiRender(Gui* pGui)
 {
+    Falcor::Gui::Window w(pGui, "Settings", settings.guiSize, settings.guiPos);
+    renderGlobalUI(pGui);
     // complete gui
     settings.renderUI(pGui);
 }

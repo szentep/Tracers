@@ -1,5 +1,7 @@
-#include "PolynomialFitting.slang"
 #include "Lights.slang"
+#include "Polynomial.slang"
+#include "PolynomialFitting.slang"
+
 
 // Render mode
 #define DIRECT_RAYTRACE 0
@@ -79,13 +81,24 @@ float3 calculateNormalBarthSextic(float3 p)
 
 struct Ray
 {
-    float3 origin;
-    float3 dir;
+    float3 origin = float3(0.0);
+    float tMin = 0.0;
+    float3 dir = float3(1.0, 0.0, 0.0);
+    float tMax = 0.0;
 
     // Get point along ray at distance dist
     float3 at(float dist)
     {
         return origin + dir * dist;
+    }
+
+    // Get point along a ray at a normalized parameter. tMin and tMax must be set!
+    float3 atNormalized(float t)
+    {
+        #if NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
+            t = 0.5 * t + 0.5; // Chebyshev nodes are in [-1,1], remap to [0,1]
+        #endif
+        return at(lerp(tMin, tMax, t));
     }
 };
 
@@ -97,17 +110,17 @@ struct Ray
  * s0: sphere center
  * sr: sphere radius
  */
-float raySphereIntersect(Ray r, float3 s0, float sr) {
+float raySphereIntersect(inout Ray r, float3 s0, float sr) {
     float3 s0_r0 = r.origin - s0;
     float b = 2.0 * dot(r.dir, s0_r0);
     float c = dot(s0_r0, s0_r0) - (sr * sr);
     float D = b * b - 4.0 * c;
-    if (D < 0.0) {
+    if (D <= 0.0 || -b + sqrt(D) <= 0.0) {
         return -1.0;
     }
-    float res = (-b - sqrt(D)) / 2.0;
-    if (res < 0.0) return 0.0;
-    return res;
+    r.tMin = max((-b - sqrt(D)) / 2.0, 0.0);
+    r.tMax = max((-b + sqrt(D)) / 2.0, 0.0);
+    return r.tMin;
 }
 
 /**
@@ -125,6 +138,26 @@ float refineIntersection(Ray ray, float t, float lastStep)
 
         // We assume the raymarch stopped past the boundary and positive is outside
         if (f_val < 0.0) tMin = tMid;
+        else tMax = tMid;
+    }
+    return tMax;
+}
+
+/**
+ * Refines the hit location using the Bisection Method
+ */
+float refinePolynomialIntersection(Polynomial p, float t, float fMin, float lastStep)
+{
+    float tMin = t - lastStep;
+    float tMax = t;
+    
+    for (int i = 0; i < BINARY_SEARCH_ITERATIONS; i++)
+    {
+        float tMid = (tMin + tMax) * 0.5;
+        float f_val = p.at(tMid);
+
+        // We assume the raymarch stopped past the boundary and positive is outside
+        if (f_val * fMin > 0.0) tMin = tMid;
         else tMax = tMid;
     }
     return tMax;
@@ -165,6 +198,61 @@ float rayMarchScene(Ray ray, out bool hit)
     }
 
     return dist;
+}
+
+float rayMarchPolynomial(Ray ray, out bool hit)
+{
+    hit = false;
+    float dist = raySphereIntersect(ray, float3(0.0), BOUNDING_SPHERE_RADIUS);
+    if (dist < 0.0) return 0.0; // No intersection with bounding sphere
+
+    // Fit polynomial
+    float samples[POLYNOMIAL_FIT_DEGREE + 1];
+    float maxSample = 1.0;
+    [[unroll]]
+    for (int i = 0; i <= POLYNOMIAL_FIT_DEGREE; ++i) {
+        float node = GetNode(i);
+        samples[i] = evaluateBarthSextic(ray.atNormalized(node));
+    }
+
+    Polynomial p = interpolate_polynomial(samples);
+
+    // Find first root on the interval using raymarch
+    #if NODE_TYPE_FOR_FITTING == NORMALIZED_CHEBYSHEV_NODES
+    float t = 0.0;
+    const float stepSize = 1.0 / MAX_STEPS;
+    #elif NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
+    float t = -1.0;
+    const float stepSize = 2.0 / MAX_STEPS;
+    #endif
+    float f_val = p.at(t);
+    float prev_f = 0.0;
+
+    for (int i = 0; i < MAX_STEPS; i++)
+    {
+        t += stepSize;
+        float f_val = p.at(t);
+
+        if (prev_f * f_val < 0.0)
+        {
+            hit = true;
+            break;
+        }
+
+        prev_f = f_val;
+    }
+
+    // Optional: Refine the root if we hit
+    if (hit)
+    {
+        dist = refinePolynomialIntersection(p, t, prev_f, stepSize);
+    }
+
+    // scale back t to world coordinates
+    #if NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
+        t = 0.5 * t + 0.5; // Chebyshev nodes are in [-1,1], remap to [0,1]
+    #endif
+    return lerp(ray.tMin, ray.tMax, t);
 }
 
 // --- Camera Tools ---
@@ -219,7 +307,7 @@ float4 mainImage(float2 fragCoord)
     float dist = rayMarchScene(ray, hit);
 #elif RENDER_MODE == POLYNOMIAL_FITTING_RAYTRACE // Use Polynomial Fitting Raytracer
     hit = false;
-    float dist = 0.0;
+    float dist = rayMarchPolynomial(ray, hit);
 #endif
     
     float3 finalColor = float3(0.1, 0.1, 0.15); // Background Color
