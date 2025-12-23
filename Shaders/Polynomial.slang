@@ -5,8 +5,8 @@
 // Utility class and functions to represent and evaluate polynomials
 //
 
-#ifndef POLYNOMIAL_FIT_DEGREE
-#define POLYNOMIAL_FIT_DEGREE 1
+#ifndef POLYNOMIAL_DEGREE
+#define POLYNOMIAL_DEGREE 1
 #endif
 
 // Basis function for polynomial fitting
@@ -22,47 +22,53 @@
 #endif
 
 // Evaluation scheme for the monomial basis
-#ifndef MONOMIAL_EVAL_HORNER
-#define MONOMIAL_EVAL_HORNER 0
-#endif
-#ifndef MONOMIAL_EVAL_COMP_HORNER
-#define MONOMIAL_EVAL_COMP_HORNER 1
-#endif
-
 #ifndef EVALUATION_SCHEME_MONOMIAL
-#define EVALUATION_SCHEME_MONOMIAL MONOMIAL_EVAL_COMP_HORNER
+#define EVALUATION_SCHEME_MONOMIAL Horner
 #endif
 
 // ------------------------------------------------------------------
 // Error-Free Transformations (EFT)
 // ------------------------------------------------------------------
 
-// Computes s = fl(a + b) and error e.
-void TwoSum(float a, float b, out float s, out float e)
+// returns (hi, lo) with hi+lo = a+b exactly
+precise float2 twoSum(float a, float b)
 {
-    // 'precise' prevents the compiler from optimizing (s - a) -> b
-    precise s = a + b;
-    precise float v = s - a;
-    precise float e_a = s - v;
-    precise e = (a - e_a) + (b - v);
+    precise float s = a + b;                 // 1 op  (rounded sum)
+    precise float bb = s - a;                // 2 op
+    precise float aa = s - bb;               // 3 op
+    precise float err = (a - aa) + (b - bb); // 4 & 5 ops
+    return float2(s, err);                   // pair is exact
 }
 
 // Computes p = fl(a * b) and error e using FMA.
-void TwoProduct(float a, float b, out float p, out float e)
+precise float2 twoProd(float a, float b)
 {
-    precise p = a * b;
-    
-    // fma(a, b, c) = (a * b) + c computed with infinite precision, then rounded.
-    // This isolates the rounding error of the multiplication.
-    precise e = mad(a, b, -p);
+    precise float p = a * b;
+    precise float e = mad(a, b, -p);
+    return float2(p, e);
+}
+
+// re-normalize so |lo| ≤ ½ ulp(hi)
+float2 renorm(float2 x) 
+{
+    float2 t = twoSum(x.x, x.y);
+    return float2(t.x, t.y); // hi = t.x, lo = t.y  (non-overlap)
+}
+
+// add two DS numbers, return DS
+float2 dsAdd(float2 a, float2 b) 
+{
+    float2 s = twoSum(a.x, b.x); // add highs
+    float lo = a.y + b.y + s.y;  // collect low parts
+    return renorm(float2(s.x, lo));
 }
 
 struct Polynomial
 {
-    float coeffs[POLYNOMIAL_FIT_DEGREE + 1];
-    const static int N = POLYNOMIAL_FIT_DEGREE;
+    float coeffs[POLYNOMIAL_DEGREE + 1];
+    const static int N = POLYNOMIAL_DEGREE;
 
-    float horner(float t)
+    float Horner(float t)
     {
         float result = coeffs[N];
         for (int i = N - 1; i >= 0; --i)
@@ -87,7 +93,7 @@ struct Polynomial
     }
 
     // Compensated Horner's method for polynomial evaluation
-    float compHorner(float t)
+    float compensatedHorner(float t)
     {
         float s = coeffs[N];
         float c = 0.0f; 
@@ -95,16 +101,14 @@ struct Polynomial
         [unroll] 
         for (int i = N - 1; i >= 0; --i)
         {
-            float p, pi;
-            TwoProduct(s, t, p, pi);
+            float2 p = twoProd(s, t);
 
-            float s_new, sigma;
-            TwoSum(p, coeffs[i], s_new, sigma);
-            s = s_new;
+            float2 s2 = twoSum(p.x, coeffs[i]);
+            s = s2.x;
 
             // Accumulate correction term
             // We use standard ops here as this is the lower-significance part
-            c = mad(c, t, pi + sigma);
+            c = mad(c, t, p.y + s2.y);
         }
 
         return s + c;
@@ -114,11 +118,7 @@ struct Polynomial
     float at(float t)
     {
     #if SELECTED_BASIS == BASIS_ID_MONOMIAL
-        #if EVALUATION_SCHEME_MONOMIAL == MONOMIAL_EVAL_HORNER
-            return horner(t);
-        #elif EVALUATION_SCHEME_MONOMIAL == MONOMIAL_EVAL_COMP_HORNER
-            return compHorner(t);
-        #endif
+        return EVALUATION_SCHEME_MONOMIAL(t);
     #elif SELECTED_BASIS == BASIS_ID_BERNSTEIN
         return deCasteljau(t);
     #endif

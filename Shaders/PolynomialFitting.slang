@@ -7,8 +7,8 @@
 // Utility functions to handle Polynomial fitting
 //
 
-#ifndef POLYNOMIAL_FIT_DEGREE
-#define POLYNOMIAL_FIT_DEGREE 1
+#ifndef POLYNOMIAL_DEGREE
+#define POLYNOMIAL_DEGREE 1
 #endif
 
 // Basis function for polynomial fitting
@@ -537,32 +537,32 @@ static const float ChebyshevNodes[] =
 
 float GetNode(int i)
 {
-#if POLYNOMIAL_FIT_DEGREE > MAX_DEGREE_IMPLEMENTED
+#if POLYNOMIAL_DEGREE > MAX_DEGREE_IMPLEMENTED
     #error Cannot implement fitting and queries as the requested degree is higher than what is implemented.
 #endif
 #if NODE_TYPE_FOR_FITTING == NORMALIZED_CHEBYSHEV_NODES
-    return NormalizedChebyshevNodes[nodeOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i];
+    return NormalizedChebyshevNodes[nodeOffsetArray[POLYNOMIAL_DEGREE - 1] + i];
 #elif NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
-    return ChebyshevNodes[nodeOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i];
+    return ChebyshevNodes[nodeOffsetArray[POLYNOMIAL_DEGREE - 1] + i];
 #endif
 }
 
 // Convenience function to retrive the j-th sample's weight when computing the i-th
-// degree POLYNOMIAL_FIT_DEGREE polynomial fit to a collection of samples.
+// degree POLYNOMIAL_DEGREE polynomial fit to a collection of samples.
 float GetFittingCoefficient(int i, int j)
 {
 #if SELECTED_BASIS == BASIS_ID_BERNSTEIN
-    return NormalizedBernsteinChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
+    return NormalizedBernsteinChebyshevFitting[fittingOffsetArray[POLYNOMIAL_DEGREE - 1] + i * (POLYNOMIAL_DEGREE + 1) + j];
 #else // Monomial basis
     #if NODE_TYPE_FOR_FITTING == NORMALIZED_CHEBYSHEV_NODES
-        return NormalizedMonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
+        return NormalizedMonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_DEGREE - 1] + i * (POLYNOMIAL_DEGREE + 1) + j];
     #elif NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
-        return MonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_FIT_DEGREE - 1] + i * (POLYNOMIAL_FIT_DEGREE + 1) + j];
+        return MonomialChebyshevFitting[fittingOffsetArray[POLYNOMIAL_DEGREE - 1] + i * (POLYNOMIAL_DEGREE + 1) + j];
     #endif
 #endif
 }
 
-Polynomial interpolate_polynomial(float samples[POLYNOMIAL_FIT_DEGREE + 1], int degree = POLYNOMIAL_FIT_DEGREE)
+Polynomial interpolate_polynomial(float samples[POLYNOMIAL_DEGREE + 1], int degree = POLYNOMIAL_DEGREE)
 {
     Polynomial p;
     [[unroll]]

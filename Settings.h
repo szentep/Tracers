@@ -17,8 +17,8 @@ enum class FittingBasis
 
 enum class EvaluationScemeMonomial
 {
-    HORNER = 0,      // Horner's method
-    COMPENSATED_HORNER = 1, // Compensated Horner's method
+    Horner,            // Horner's method
+    compensatedHorner, // Compensated Horner's method
 };
 
 enum class NodeType
@@ -43,7 +43,7 @@ public:
 
     RenderMode renderMode = RenderMode::POLYNOMIAL_FITTING_RAYTRACE;
     FittingBasis selectedBasis = FittingBasis::MONOMIAL;
-    EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::HORNER;
+    EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     NodeType nodeType = NodeType::CHEBYSHEV;
 
     const static uint32_t windowWidth = 1280;

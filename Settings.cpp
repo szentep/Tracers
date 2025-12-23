@@ -26,10 +26,10 @@ void Settings::uploadLightData(const Falcor::ShaderVar& vars) const
 
 void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
 {
-    program->addDefine("POLYNOMIAL_FIT_DEGREE", std::to_string(6)); // TODO change with scene
+    program->addDefine("POLYNOMIAL_DEGREE", std::to_string(6)); // TODO change with scene
     program->addDefine("RENDER_MODE", std::to_string(magic_enum::enum_integer(renderMode)));
     program->addDefine("SELECTED_BASIS", std::to_string(magic_enum::enum_integer(selectedBasis)));
-    program->addDefine("EVALUATION_SCHEME_MONOMIAL", std::to_string(magic_enum::enum_integer(evalSchemeMonomial)));
+    program->addDefine("EVALUATION_SCHEME_MONOMIAL", std::string(magic_enum::enum_name(evalSchemeMonomial)));
     program->addDefine("NODE_TYPE_FOR_FITTING", std::to_string(magic_enum::enum_integer(nodeType)));
 }
 
