@@ -1,7 +1,7 @@
 #include "Lights.slang"
 #include "Polynomial.slang"
 #include "PolynomialFitting.slang"
-
+#include "Surfaces.slang"
 
 // Render mode
 #define DIRECT_RAYTRACE 0
@@ -22,58 +22,33 @@ cbuffer PsCB
 };
 
 // --- Configuration Constants ---
-#define BOUNDING_SPHERE_RADIUS 2.0
+#define BOUNDING_SPHERE_RADIUS 1.0
 #define NORMAL_EPSILON 0.0001
-
-// Raymarching Control
-#define MAX_STEPS 1000
 #define MAX_DIST (BOUNDING_SPHERE_RADIUS * 2.0)
 #define STEP_SIZE (MAX_DIST / MAX_STEPS)
+
+// Raymarching Control
+#ifndef MAX_STEPS
+#define MAX_STEPS 1000
+#endif
+#ifndef BINARY_SEARCH_ITERATIONS
 #define BINARY_SEARCH_ITERATIONS 8
-
-// --- Implicit Surface Definition ---
-
-/**
- * Evaluates the Barth Sextic polynomial at point p.
- * The surface is defined where this function returns 0.
- */
-float evaluateBarthSextic(float3 p)
-{
-    // return length(p) - BOUNDING_SPHERE_RADIUS;
-
-    // Constants specific to Barth Sextic
-    const float PHI = 1.61803398;
-    const float PHI2 = 2.61803398; // PHI^2
-    const float BARTH_K = 4.23606798; // (1 + 2*PHI)
-    
-    float x2 = p.x * p.x;
-    float y2 = p.y * p.y;
-    float z2 = p.z * p.z;
-    
-    // 4 * (phi^2*x^2 - y^2)(phi^2*y^2 - z^2)(phi^2*z^2 - x^2)
-    float term1 = 4.0 * (PHI2 * x2 - y2) * (PHI2 * y2 - z2) * (PHI2 * z2 - x2);
-    
-    // (1 + 2phi) * (x^2 + y^2 + z^2 - 1)^2
-    float r2 = x2 + y2 + z2;
-    float term2 = BARTH_K * (r2 - 1.0) * (r2 - 1.0);
-    
-    return term1 - term2;
-}
+#endif
 
 /**
  * Calculates the surface normal using Forward Differences
  */
-float3 calculateNormalBarthSextic(float3 p)
+float3 calculateSurfaceNormal(float3 p)
 {
-    float valCenter = evaluateBarthSextic(p);
+    float valCenter = SURFACE_FUNCTION(p);
     float2 h = float2(NORMAL_EPSILON, 0.0);
     
     // Gradient ~ [f(x+h)-f(x), f(y+h)-f(y), f(z+h)-f(z)]
     // We reuse valCenter (f(p)) to save 1 evaluation
     return normalize(float3(
-        evaluateBarthSextic(p + h.xyy) - valCenter,
-        evaluateBarthSextic(p + h.yxy) - valCenter,
-        evaluateBarthSextic(p + h.yyx) - valCenter
+        SURFACE_FUNCTION(p + h.xyy) - valCenter,
+        SURFACE_FUNCTION(p + h.yxy) - valCenter,
+        SURFACE_FUNCTION(p + h.yyx) - valCenter
     ));
 }
 
@@ -135,7 +110,7 @@ float refineIntersection(Ray ray, float t, float fMin, float lastStep)
     for (int i = 0; i < BINARY_SEARCH_ITERATIONS; i++)
     {
         float tMid = (tMin + tMax) * 0.5;
-        float f_val = evaluateBarthSextic(ray.at(tMid));
+        float f_val = SURFACE_FUNCTION(ray.at(tMid));
 
         if (f_val * fMin > 0.0) tMin = tMid;
         else tMax = tMid;
@@ -170,7 +145,7 @@ float rayMarchScene(Ray ray, inout bool hit)
 
     // Step to bounding sphere first for efficiency
     float dist0 = dist;
-    float f_val = evaluateBarthSextic(ray.origin);
+    float f_val = SURFACE_FUNCTION(ray.origin);
     float prev_f = 0.0;
 
     for(int i = 0; i < MAX_STEPS; i++)
@@ -178,7 +153,7 @@ float rayMarchScene(Ray ray, inout bool hit)
         dist += STEP_SIZE;
         float3 p = ray.at(dist);
         if (length(p) > BOUNDING_SPHERE_RADIUS) break;
-        float f_val = evaluateBarthSextic(p);
+        float f_val = SURFACE_FUNCTION(p);
 
         if (prev_f * f_val < 0.0) 
         {
@@ -208,7 +183,7 @@ float rayMarchPolynomial(Ray ray, inout bool hit)
     [[unroll]]
     for (int i = 0; i <= POLYNOMIAL_DEGREE; ++i) {
         float node = GetNode(i);
-        samples[i] = evaluateBarthSextic(ray.atNormalized(node));
+        samples[i] = SURFACE_FUNCTION(ray.atNormalized(node));
     }
 
     Polynomial p = interpolate_polynomial(samples);
@@ -284,9 +259,9 @@ float3x3 rotateX(float angle)
 Ray generateRay(float2 uv)
 {
     Ray ray;
-    #ifdef ORBIT_CAMERA
-        float3 camPos = float3(0.0, 0.0, -3.0);
-        float3 rayDir = normalize(float3(uv, 1.5)); // 1.5 is the (FOV)
+#ifdef ORBIT_CAMERA
+        float3 camPos = float3(0.0, 0.0, -2.0 * BOUNDING_SPHERE_RADIUS);
+        float3 rayDir = normalize(float3(uv, 1.0)); // 1.5 is the (FOV)
         // Animation
         float time = iGlobalTime * 0.2;
         float3x3 camRot = rotateY(time); // mul(rotateY(time), rotateX(time * 0.7));
@@ -320,7 +295,7 @@ float4 mainImage(float2 fragCoord)
     if(hit)
     {
         float3 hitPos = ray.at(dist);
-        float3 normal = calculateNormalBarthSextic(hitPos);
+        float3 normal = calculateSurfaceNormal(hitPos);
         finalColor = CalculateBlinnPhong(hitPos, normal, -ray.dir); // View direction is ray direction
     }
 

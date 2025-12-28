@@ -2,6 +2,7 @@
 #include "Falcor.h"
 #include <imgui.h>
 #include "Utils/magic_enum.hpp"
+#include <map>
 
 enum class RenderMode
 {
@@ -27,6 +28,22 @@ enum class NodeType
     NORMALIZED_CHEBYSHEV = 1, // Chebyshev nodes normalized to [0,1]
 };
 
+enum class SurfaceType
+{
+    barthSextic,
+    endrassOctic,
+    calyx,
+    geisha,
+    calypso,
+    distel,
+    flirt,
+};
+
+struct SurfaceProperties
+{
+    uint32_t degree;
+};
+
 class Settings
 {
     using Gui = Falcor::Gui;
@@ -41,16 +58,35 @@ public:
     void uploadLightData(const Falcor::ShaderVar& vars) const;
     void addDefines(Falcor::ref<Falcor::Program> program) const;
 
+    // Render settings
     RenderMode renderMode = RenderMode::POLYNOMIAL_FITTING_RAYTRACE;
     FittingBasis selectedBasis = FittingBasis::MONOMIAL;
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     NodeType nodeType = NodeType::CHEBYSHEV;
+
+    // Surface settings
+    SurfaceType surfaceType = SurfaceType::barthSextic;
+    std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
+        {SurfaceType::barthSextic, {6}},
+        {SurfaceType::endrassOctic, {8}},
+        {SurfaceType::calyx, {5}},
+        {SurfaceType::geisha, {4}},
+        {SurfaceType::calypso, {3}},
+        {SurfaceType::distel, {6}},
+        {SurfaceType::flirt, {4}},
+    };
 
     const static uint32_t windowWidth = 1280;
     const static uint32_t windowHeight = 720;
 
     Falcor::uint2 guiSize = {300, windowHeight - 150};
     Falcor::uint2 guiPos = {0, 0};
+
+    struct TraceSettings
+    {
+        int32_t maxSteps = 1000;
+        int32_t binarySearchIterations = 8;
+    } traceSettings;
 
     struct CameraSettings
     {
@@ -70,8 +106,10 @@ public:
 
 private:
     void renderProgramUI(Gui* pGui);
+    void renderSceneUI(Gui* pGui);
     void renderCameraUI(Gui* pGui);
     void renderShadingUI(Gui* pGui);
+    
 
     // Draw an ImGui combo box for selecting enum values using magic_enum
     template<typename T>
