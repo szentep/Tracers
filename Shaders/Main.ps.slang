@@ -1,15 +1,10 @@
 #include "Lights.slang"
 #include "Polynomial.slang"
 #include "PolynomialFitting.slang"
+#include "Rootfinders/Rootfinders.slang"
 #include "Surfaces.slang"
-
-// Render mode
-#define DIRECT_RAYTRACE 0
-#define POLYNOMIAL_FITTING_RAYTRACE 1
-
-#ifndef RENDER_MODE
-#define RENDER_MODE DIRECT_RAYTRACE
-#endif
+#include "Ray.slang"
+#include "Settings.slang"
 
 cbuffer PsCB
 {
@@ -21,87 +16,9 @@ cbuffer PsCB
     float3 iEyeUp;
 };
 
-// --- Configuration Constants ---
-#define BOUNDING_SPHERE_RADIUS 1.0
-#define NORMAL_EPSILON 0.0001
-#define MAX_DIST (BOUNDING_SPHERE_RADIUS * 2.0)
-#define STEP_SIZE (MAX_DIST / MAX_STEPS)
-
-// Raymarching Control
-#ifndef MAX_STEPS
-#define MAX_STEPS 1000
-#endif
-#ifndef BINARY_SEARCH_ITERATIONS
-#define BINARY_SEARCH_ITERATIONS 8
-#endif
-
-/**
- * Calculates the surface normal using Forward Differences
- */
-float3 calculateSurfaceNormal(float3 p)
-{
-    float valCenter = SURFACE_FUNCTION(p);
-    float2 h = float2(NORMAL_EPSILON, 0.0);
-    
-    // Gradient ~ [f(x+h)-f(x), f(y+h)-f(y), f(z+h)-f(z)]
-    // We reuse valCenter (f(p)) to save 1 evaluation
-    return normalize(float3(
-        SURFACE_FUNCTION(p + h.xyy) - valCenter,
-        SURFACE_FUNCTION(p + h.yxy) - valCenter,
-        SURFACE_FUNCTION(p + h.yyx) - valCenter
-    ));
-}
-
 // --- Intersection Logic ---
 
-struct Ray
-{
-    float3 origin = float3(0.0);
-    float tMin = 0.0;
-    float3 dir = float3(1.0, 0.0, 0.0);
-    float tMax = 0.0;
-
-    // Get point along ray at distance dist
-    float3 at(float dist)
-    {
-        return origin + dir * dist;
-    }
-
-    // Get point along a ray at a normalized parameter. tMin and tMax must be set!
-    float3 atNormalized(float t)
-    {
-        #if NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
-            t = 0.5 * t + 0.5; // Chebyshev nodes are in [-1,1], remap to [0,1]
-        #endif
-        return at(lerp(tMin, tMax, t));
-    }
-};
-
-/**
- * Ray-Sphere Intersection Test
- * Returns distance to intersection or -1.0 if no intersection. Inside the sphere returns 0.
- * ro: ray origin
- * rd: normalized ray direction
- * s0: sphere center
- * sr: sphere radius
- */
-float raySphereIntersect(inout Ray r, float3 s0, float sr)
-{
-    float3 s0_r0 = r.origin - s0;
-    float b = 2.0 * dot(r.dir, s0_r0);
-    float c = dot(s0_r0, s0_r0) - (sr * sr);
-    float D = b * b - 4.0 * c;
-    if (D <= 0.0 || -b + sqrt(D) <= 0.0) {
-        return -1.0;
-    }
-    r.tMin = max((-b - sqrt(D)) / 2.0, 0.0);
-    r.tMax = max((-b + sqrt(D)) / 2.0, 0.0);
-    return r.tMin;
-}
-
-/**
- * Refines the hit location using the Bisection Method
- */
+// Refines the hit location on the surface using the Bisection Method
 float refineIntersection(Ray ray, float t, float fMin, float lastStep)
 {
     float tMin = t - lastStep;
@@ -118,25 +35,7 @@ float refineIntersection(Ray ray, float t, float fMin, float lastStep)
     return tMax;
 }
 
-/**
- * Refines the hit location using the Bisection Method
- */
-float refinePolynomialIntersection(Polynomial p, float t, float fMin, float lastStep)
-{
-    float tMin = t - lastStep;
-    float tMax = t;
-    
-    for (int i = 0; i < BINARY_SEARCH_ITERATIONS; i++)
-    {
-        float tMid = (tMin + tMax) * 0.5;
-        float f_val = p.at(tMid);
-
-        if (f_val * fMin > 0.0) tMin = tMid;
-        else tMax = tMid;
-    }
-    return tMax;
-}
-
+// Ray march the scene directly
 float rayMarchScene(Ray ray, inout bool hit)
 {
     hit = false;
@@ -148,9 +47,10 @@ float rayMarchScene(Ray ray, inout bool hit)
     float f_val = SURFACE_FUNCTION(ray.origin);
     float prev_f = 0.0;
 
-    for(int i = 0; i < MAX_STEPS; i++)
+    float stepSize = MAX_DIST / MAX_RAYMARCHING_STEPS;
+    for(int i = 0; i < MAX_RAYMARCHING_STEPS; i++)
     {
-        dist += STEP_SIZE;
+        dist += stepSize;
         float3 p = ray.at(dist);
         if (length(p) > BOUNDING_SPHERE_RADIUS) break;
         float f_val = SURFACE_FUNCTION(p);
@@ -169,61 +69,30 @@ float rayMarchScene(Ray ray, inout bool hit)
     // Refine the root if we hit
     if (hit)
     {
-        dist = refineIntersection(ray, dist, prev_f, STEP_SIZE);
+        dist = refineIntersection(ray, dist, prev_f, stepSize);
     }
 
     return dist;
 }
 
-float rayMarchPolynomial(Ray ray, inout bool hit)
+float polynomialFitting(Ray ray, inout bool hit)
 {
-    // Fit polynomial
-    float samples[POLYNOMIAL_DEGREE + 1];
-    float maxSample = 1.0;
-    [[unroll]]
-    for (int i = 0; i <= POLYNOMIAL_DEGREE; ++i) {
-        float node = GetNode(i);
-        samples[i] = SURFACE_FUNCTION(ray.atNormalized(node));
-    }
+    Polynomial poly = fitPolynomial(ray);
 
-    Polynomial p = interpolate_polynomial(samples);
+    #if NODE_TYPE_FOR_FITTING == NORMALIZED_CHEBYSHEV_NODES
+        float begin = 0.0;
+    #elif NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
+        float begin = -1.0;
+    #endif
 
     // Find first root on the interval using raymarch
-    #if NODE_TYPE_FOR_FITTING == NORMALIZED_CHEBYSHEV_NODES
-        float t = 0.0;
-        const float stepSize = 1.0 / MAX_STEPS;
-    #elif NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
-        float t = -1.0;
-        const float stepSize = 2.0 / MAX_STEPS;
-    #endif
-    float f_val = p.at(t);
-    float prev_f = 0.0;
-
-    for (int i = 0; i < MAX_STEPS; i++)
-    {
-        t += stepSize;
-        float f_val = p.at(t);
-
-        if (prev_f * f_val < 0.0)
-        {
-            hit = true;
-            break;
-        }
-
-        prev_f = f_val;
-    }
-
-    // Refine the root if we hit
-    if (hit)
-    {
-        t = refinePolynomialIntersection(p, t, prev_f, stepSize);
-    }
+    float intersect = POLY_ROOTFINDER(poly, begin, 1.0, hit);
 
     // scale back t to world coordinates
     #if NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
-        t = 0.5 * t + 0.5; // Chebyshev nodes are in [-1,1], remap to [0,1]
+        intersect = 0.5 * intersect + 0.5; // Chebyshev nodes are in [-1,1], remap to [0,1]
     #endif
-    return lerp(ray.tMin, ray.tMax, t);
+    return lerp(ray.tMin, ray.tMax, intersect);
 }
 
 // returns distance to intersection along ray, sets hit to true if intersection occurs
@@ -233,11 +102,7 @@ float raySurfaceIntersection(Ray ray, inout bool hit)
     float dist = raySphereIntersect(ray, float3(0.0), BOUNDING_SPHERE_RADIUS);
     if (dist < 0.0) return 0.0; // No intersection with bounding sphere
     // Render mode switch
-    #if RENDER_MODE == DIRECT_RAYTRACE // Raymarch the scene directly
-        return rayMarchScene(ray, hit);
-    #elif RENDER_MODE == POLYNOMIAL_FITTING_RAYTRACE // Use Polynomial Fitting Raytracer
-        return rayMarchPolynomial(ray, hit);
-    #endif
+    return RENDER_MODE(ray, hit);
 }
 
 // --- Camera Tools ---
@@ -259,7 +124,7 @@ float3x3 rotateX(float angle)
 Ray generateRay(float2 uv)
 {
     Ray ray;
-#ifdef ORBIT_CAMERA
+    #ifdef ORBIT_CAMERA
         float3 camPos = float3(0.0, 0.0, -2.0 * BOUNDING_SPHERE_RADIUS);
         float3 rayDir = normalize(float3(uv, 1.0)); // 1.5 is the (FOV)
         // Animation

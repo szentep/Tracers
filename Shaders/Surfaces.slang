@@ -6,11 +6,23 @@
 // The surface is defined where the functions return 0
 //
 
-#ifndef SURFACE_FUNCTION
-#define SURFACE_FUNCTION barthSextic
-#endif
 
-// --- Implicit Surface Definitions ---
+// Calculates the surface normal using Forward Differences
+
+float3 calculateSurfaceNormal(float3 p)
+{
+    float valCenter = SURFACE_FUNCTION(p);
+    float2 h = float2(NORMAL_EPSILON, 0.0);
+    
+    // Gradient ~ [f(x+h)-f(x), f(y+h)-f(y), f(z+h)-f(z)]
+    // We reuse valCenter (f(p)) to save 1 evaluation
+    return normalize(float3(
+        SURFACE_FUNCTION(p + h.xyy) - valCenter,
+        SURFACE_FUNCTION(p + h.yxy) - valCenter,
+        SURFACE_FUNCTION(p + h.yyx) - valCenter
+    ));
+}
+
 
 // Surfaces from https://mathworld.wolfram.com/AlgebraicSurface.html
 

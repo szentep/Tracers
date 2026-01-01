@@ -1,25 +1,11 @@
 #ifndef POLYNOMIAL
 #define POLYNOMIAL
 
+#include "Settings.slang"
+
 //
 // Utility class and functions to represent and evaluate polynomials
 //
-
-#ifndef POLYNOMIAL_DEGREE
-#define POLYNOMIAL_DEGREE 1
-#endif
-
-// Basis function for polynomial fitting
-#ifndef BASIS_ID_MONOMIAL
-#define BASIS_ID_MONOMIAL 0
-#endif
-#ifndef BASIS_ID_BERNSTEIN
-#define BASIS_ID_BERNSTEIN 1
-#endif
-
-#ifndef SELECTED_BASIS
-#define SELECTED_BASIS BASIS_ID_MONOMIAL
-#endif
 
 // Evaluation scheme for the monomial basis
 #ifndef EVALUATION_SCHEME_MONOMIAL
@@ -68,9 +54,17 @@ struct Polynomial
     float coeffs[POLYNOMIAL_DEGREE + 1];
     const static int N = POLYNOMIAL_DEGREE;
 
+    // Slang allows overriding operator[] with __subscript syntax:
+    __subscript(int x) -> float
+    {
+        get { return coeffs[x]; }
+        set { coeffs[x] = newValue; }
+    }
+
     float Horner(float t)
     {
         float result = coeffs[N];
+        [[unroll]]
         for (int i = N - 1; i >= 0; --i)
         {
             result = t * result + coeffs[i];
@@ -122,6 +116,21 @@ struct Polynomial
     #elif SELECTED_BASIS == BASIS_ID_BERNSTEIN
         return deCasteljau(t);
     #endif
+    }
+
+    // evaluate polynomial and derivative at t
+    float valueAndDerivativeAt(float t, out float derivative)
+    {
+        float value = coeffs[POLYNOMIAL_DEGREE] * t + coeffs[POLYNOMIAL_DEGREE - 1];
+		derivative = coeffs[POLYNOMIAL_DEGREE];
+
+		[[unroll]]
+		for (int j = POLYNOMIAL_DEGREE - 2; j != -1; --j)
+		{
+			derivative = derivative * t + value;
+			value = value * t + coeffs[j];
+		}
+        return value;
     }
 }
 

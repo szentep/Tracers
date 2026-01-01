@@ -6,8 +6,8 @@
 
 enum class RenderMode
 {
-    DIRECT_RAYTRACE = 0,             // Direct raytracing on the function
-    POLYNOMIAL_FITTING_RAYTRACE = 1, // Raytracing on the polynomial fitting of the function
+    rayMarchScene = 0,     // Direct raytracing on the function
+    polynomialFitting = 1, // Fit a polynomial and use a rootfinder
 };
 
 enum class FittingBasis
@@ -22,9 +22,15 @@ enum class EvaluationScemeMonomial
     compensatedHorner, // Compensated Horner's method
 };
 
+enum class PolynomialRootFinder
+{
+    rayMarch,               // Raymarching on the polynomial
+    YukselBracketed,        // Yuksel's method
+};
+
 enum class NodeType
 {
-    CHEBYSHEV = 0,  // Chebyshev nodes on [-1,1]
+    CHEBYSHEV = 0,            // Chebyshev nodes on [-1,1]
     NORMALIZED_CHEBYSHEV = 1, // Chebyshev nodes normalized to [0,1]
 };
 
@@ -55,17 +61,19 @@ public:
     void renderUI(Gui* pGui);
 
     void uploadData(const Falcor::ShaderVar& vars, Falcor::ref<Falcor::Program> program) const;
+    void uploadRootFinderData(const Falcor::ShaderVar& vars) const;
     void uploadLightData(const Falcor::ShaderVar& vars) const;
     void addDefines(Falcor::ref<Falcor::Program> program) const;
 
     // Render settings
-    RenderMode renderMode = RenderMode::POLYNOMIAL_FITTING_RAYTRACE;
+    RenderMode renderMode = RenderMode::polynomialFitting;
     FittingBasis selectedBasis = FittingBasis::MONOMIAL;
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     NodeType nodeType = NodeType::CHEBYSHEV;
+    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
 
     // Surface settings
-    SurfaceType surfaceType = SurfaceType::barthSextic;
+    SurfaceType surfaceType = SurfaceType::calyx;
     std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
         {SurfaceType::barthSextic, {6}},
         {SurfaceType::endrassOctic, {8}},
@@ -84,9 +92,14 @@ public:
 
     struct TraceSettings
     {
-        int32_t maxSteps = 1000;
+        int32_t maxRaymarchingSteps = 1000;
         int32_t binarySearchIterations = 8;
     } traceSettings;
+
+    struct RootFinderSettings
+    {
+        float errorTolerance = 1e-3f;
+    } rootfinderSettings;
 
     struct CameraSettings
     {
@@ -109,7 +122,6 @@ private:
     void renderSceneUI(Gui* pGui);
     void renderCameraUI(Gui* pGui);
     void renderShadingUI(Gui* pGui);
-    
 
     // Draw an ImGui combo box for selecting enum values using magic_enum
     template<typename T>

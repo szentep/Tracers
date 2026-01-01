@@ -2,51 +2,13 @@
 #define POLYNOMIAL_FITTING
 
 #include "Polynomial.slang"
+#include "Surfaces.slang"
+#include "Settings.slang"
+#include "Ray.slang"
 
 //
 // Utility functions to handle Polynomial fitting
 //
-
-#ifndef POLYNOMIAL_DEGREE
-#define POLYNOMIAL_DEGREE 1
-#endif
-
-// Basis function for polynomial fitting
-#ifndef BASIS_ID_MONOMIAL
-#define BASIS_ID_MONOMIAL 0
-#endif
-#ifndef BASIS_ID_BERNSTEIN
-#define BASIS_ID_BERNSTEIN 1
-#endif
-
-#ifndef SELECTED_BASIS
-#define SELECTED_BASIS BASIS_ID_MONOMIAL
-#endif
-
-// Type of nodes to use for fitting
-#ifndef CHEBYSHEV_NODES
-#define CHEBYSHEV_NODES 0
-#endif
-#ifndef NORMALIZED_CHEBYSHEV_NODES
-#define NORMALIZED_CHEBYSHEV_NODES 1
-#endif
-
-#ifndef NODE_TYPE_FOR_FITTING
-#define NODE_TYPE_FOR_FITTING NORMALIZED_CHEBYSHEV_NODES
-#endif
-
-
-// All functions below require a float EvalFunction(float t) function to be available. Usually,
-// this will be the f( p0 + t*v ) function value, implemented something like
-//
-// float EvalFunction(t)
-// {
-//    return sdfInside(ray.orig + t * ray.dir);
-// }
-//
-#ifndef EvalFunction
-//#error Unkown value for LIP_TRACE_FUN_NUM
-#endif
 
 // The maximum degree of fitting - requesting higher should lead to assertion
 #define MAX_DEGREE_IMPLEMENTED 16
@@ -62,6 +24,7 @@ static const int fittingOffsetArray[] = { 0, 4, 13, 29, 54, 90, 139, 203, 284, 3
 // matrices below are the inverted normal matrices, the latter being evaluated at Chebyshev nodes.
 // Note that these matrices need not be stored entirely, we can halve storage by noting the
 // symmetry in the coefficients.
+
 // Bernstein basis using Chebyshev nodes.
 static const float NormalizedBernsteinChebyshevFitting[] =
 {
@@ -717,7 +680,7 @@ float GetFittingCoefficient(int i, int j)
 #endif
 }
 
-Polynomial interpolate_polynomial(float samples[POLYNOMIAL_DEGREE + 1], int degree = POLYNOMIAL_DEGREE)
+Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degree = POLYNOMIAL_DEGREE)
 {
     Polynomial p;
     [[unroll]]
@@ -731,6 +694,17 @@ Polynomial interpolate_polynomial(float samples[POLYNOMIAL_DEGREE + 1], int degr
         }
     }
     return p;
+}
+
+Polynomial fitPolynomial(Ray ray)
+{
+    float samples[POLYNOMIAL_DEGREE + 1];
+    [[unroll]]
+    for (int i = 0; i <= POLYNOMIAL_DEGREE; ++i) {
+        float node = GetNode(i);
+        samples[i] = SURFACE_FUNCTION(ray.atNormalized(node));
+    }
+    return interpolatePolynomial(samples);
 }
 
 #endif // POLYNOMIAL_FITTING

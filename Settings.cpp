@@ -12,8 +12,14 @@ void Settings::renderUI(Gui* pGui)
 
 void Settings::uploadData(const Falcor::ShaderVar& vars, Falcor::ref<Falcor::Program> program) const
 {
+    uploadRootFinderData(vars["RootFinderCB"]);
     uploadLightData(vars["LightCB"]);
     addDefines(program);
+}
+
+void Settings::uploadRootFinderData(const Falcor::ShaderVar& vars) const
+{
+    vars["errorTolerance"] = rootfinderSettings.errorTolerance;
 }
 
 void Settings::uploadLightData(const Falcor::ShaderVar& vars) const
@@ -32,18 +38,17 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
     program->addDefine("SURFACE_FUNCTION", std::string(magic_enum::enum_name(surfaceType)));
 
     // Render settings
-    program->addDefine("RENDER_MODE", std::to_string(magic_enum::enum_integer(renderMode)));
-    program->addDefine("SELECTED_BASIS", std::to_string(magic_enum::enum_integer(selectedBasis)));
+    program->addDefine("RENDER_MODE", std::string(magic_enum::enum_name(renderMode)));
     program->addDefine("EVALUATION_SCHEME_MONOMIAL", std::string(magic_enum::enum_name(evalSchemeMonomial)));
+    program->addDefine("SELECTED_BASIS", std::to_string(magic_enum::enum_integer(selectedBasis)));
     program->addDefine("NODE_TYPE_FOR_FITTING", std::to_string(magic_enum::enum_integer(nodeType)));
 
     // Raymarching Control
-    program->addDefine("MAX_STEPS", std::to_string(traceSettings.maxSteps));
+    program->addDefine("MAX_RAYMARCHING_STEPS", std::to_string(traceSettings.maxRaymarchingSteps));
     program->addDefine("BINARY_SEARCH_ITERATIONS", std::to_string(traceSettings.binarySearchIterations));
 
-    // Trace
-    program->addDefine("MAX_STEPS", std::to_string(traceSettings.maxSteps));
-    program->addDefine("BINARY_SEARCH_ITERATIONS", std::to_string(traceSettings.binarySearchIterations));
+    // Root finder
+    program->addDefine("POLY_ROOTFINDER", std::string(magic_enum::enum_name(polynomialRootFinder)));
 }
 
 void Settings::renderProgramUI(Gui* pGui)
@@ -51,19 +56,34 @@ void Settings::renderProgramUI(Gui* pGui)
     auto programGroup = Gui::Group(pGui, "Program settings", true);
     if (programGroup.open())
     {
-        imGuiEnumSelector("Render Mode", renderMode);
-        if (renderMode == RenderMode::POLYNOMIAL_FITTING_RAYTRACE)
+        imGuiEnumSelector("Render mode", renderMode);
+        if (renderMode == RenderMode::polynomialFitting)
         {
-            imGuiEnumSelector("Node Type", nodeType);
+            imGuiEnumSelector("Node type", nodeType);
 
             // imGuiEnumSelector("Fitting Basis", selectedBasis); // TODO support bernstein basis
             if (selectedBasis == FittingBasis::MONOMIAL)
             {
                 imGuiEnumSelector("Eval.Sceme", evalSchemeMonomial);
             }
+
+            imGuiEnumSelector("Root finder", polynomialRootFinder);
+            if (polynomialRootFinder == PolynomialRootFinder::rayMarch)
+            {
+                ImGui::InputInt("Maximum steps", &traceSettings.maxRaymarchingSteps, 100);
+                ImGui::InputInt("Binary search iterations", &traceSettings.binarySearchIterations);
+            }
+            else if (polynomialRootFinder == PolynomialRootFinder::YukselBracketed)
+            {
+                ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.5f");
+            }
         }
-        ImGui::InputInt("Maximum steps", &traceSettings.maxSteps, 100);
-        ImGui::InputInt("Binary search iterations", &traceSettings.binarySearchIterations);
+        else if (renderMode == RenderMode::rayMarchScene)
+        {
+            ImGui::InputInt("Maximum steps", &traceSettings.maxRaymarchingSteps, 100);
+            ImGui::InputInt("Binary search iterations", &traceSettings.binarySearchIterations);
+        }
+
         programGroup.release();
     }
 }
@@ -91,6 +111,4 @@ void Settings::renderCameraUI(Gui* pGui)
     }
 }
 
-void Settings::renderShadingUI(Gui* pGui) {
-
-}
+void Settings::renderShadingUI(Gui* pGui) {}
