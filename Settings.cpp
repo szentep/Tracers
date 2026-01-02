@@ -40,6 +40,7 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
     // Render settings
     program->addDefine("RENDER_MODE", std::string(magic_enum::enum_name(renderMode)));
     program->addDefine("EVALUATION_SCHEME_MONOMIAL", std::string(magic_enum::enum_name(evalSchemeMonomial)));
+    program->addDefine("EVALUATION_SCHEME_BERNSTEIN", std::string(magic_enum::enum_name(evalScemeBernstein)));
     program->addDefine("SELECTED_BASIS", std::to_string(magic_enum::enum_integer(selectedBasis)));
     program->addDefine("NODE_TYPE_FOR_FITTING", std::to_string(magic_enum::enum_integer(nodeType)));
 
@@ -51,6 +52,38 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
     program->addDefine("POLY_ROOTFINDER", std::string(magic_enum::enum_name(polynomialRootFinder)));
 }
 
+// Settings for ray marching polynomial root finder
+void Settings::renderRayMarchUI(Gui* pGui)
+{
+    ImGui::InputInt("Maximum steps", &traceSettings.maxRaymarchingSteps, 100);
+    ImGui::InputInt("Binary search iterations", &traceSettings.binarySearchIterations);
+
+    imGuiEnumSelector("Fitting Basis", selectedBasis);
+
+    if (selectedBasis == FittingBasis::MONOMIAL)
+    {
+        imGuiEnumSelector("Eval.Sceme", evalSchemeMonomial);
+        // Type of nodes used for fitting
+        imGuiEnumSelector("Node type", nodeType);
+    }
+    else if (selectedBasis == FittingBasis::BERNSTEIN)
+    {
+        imGuiEnumSelector("Eval.Sceme", evalScemeBernstein);
+        // Nodes must be on [0,1]
+        ImGui::Text("Node type: Normalized Chebyshev");
+        nodeType = NodeType::NORMALIZED_CHEBYSHEV;
+    }
+}
+
+// Settings for Yuksel's bracketed root finder
+void Settings::renderYukselUI(Gui* pGui)
+{
+    ImGui::Text("Fitting Basis: Monomial");
+    selectedBasis = FittingBasis::MONOMIAL;
+
+    ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.5f");
+}
+
 void Settings::renderProgramUI(Gui* pGui)
 {
     auto programGroup = Gui::Group(pGui, "Program settings", true);
@@ -59,23 +92,15 @@ void Settings::renderProgramUI(Gui* pGui)
         imGuiEnumSelector("Render mode", renderMode);
         if (renderMode == RenderMode::polynomialFitting)
         {
-            imGuiEnumSelector("Node type", nodeType);
-
-            // imGuiEnumSelector("Fitting Basis", selectedBasis); // TODO support bernstein basis
-            if (selectedBasis == FittingBasis::MONOMIAL)
-            {
-                imGuiEnumSelector("Eval.Sceme", evalSchemeMonomial);
-            }
-
+            // Root finder specific settings
             imGuiEnumSelector("Root finder", polynomialRootFinder);
             if (polynomialRootFinder == PolynomialRootFinder::rayMarch)
             {
-                ImGui::InputInt("Maximum steps", &traceSettings.maxRaymarchingSteps, 100);
-                ImGui::InputInt("Binary search iterations", &traceSettings.binarySearchIterations);
+                renderRayMarchUI(pGui);
             }
             else if (polynomialRootFinder == PolynomialRootFinder::YukselBracketed)
             {
-                ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.5f");
+                renderYukselUI(pGui);
             }
         }
         else if (renderMode == RenderMode::rayMarchScene)

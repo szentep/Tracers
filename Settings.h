@@ -22,6 +22,12 @@ enum class EvaluationScemeMonomial
     compensatedHorner, // Compensated Horner's method
 };
 
+enum class EvaluationScemeBernstein
+{
+    deCasteljau, // De Casteljau's algorithm
+    ChudySimple, // Chudy's geometric algorithm
+};
+
 enum class PolynomialRootFinder
 {
     rayMarch,               // Raymarching on the polynomial
@@ -69,6 +75,7 @@ public:
     RenderMode renderMode = RenderMode::polynomialFitting;
     FittingBasis selectedBasis = FittingBasis::MONOMIAL;
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
+    EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
     NodeType nodeType = NodeType::CHEBYSHEV;
     PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
 
@@ -119,6 +126,9 @@ public:
 
 private:
     void renderProgramUI(Gui* pGui);
+    void renderRayMarchUI(Gui* pGui);
+    void renderYukselUI(Gui* pGui);
+
     void renderSceneUI(Gui* pGui);
     void renderCameraUI(Gui* pGui);
     void renderShadingUI(Gui* pGui);

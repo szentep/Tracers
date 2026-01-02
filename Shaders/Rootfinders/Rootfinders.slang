@@ -8,7 +8,7 @@
 
 cbuffer RootFinderCB
 {
-    float errorTolerance; // TODO populate from CPU side
+    float errorTolerance;
 };
 
 // ------------------------------------------------------------------

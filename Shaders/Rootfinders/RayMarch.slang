@@ -10,7 +10,8 @@ float refinePolynomialIntersection(Polynomial p, float t, float fMin, float last
 {
     float tMin = t - lastStep;
     float tMax = t;
-    
+
+    [[unroll]]
     for (int i = 0; i < BINARY_SEARCH_ITERATIONS; i++)
     {
         float tMid = (tMin + tMax) * 0.5;

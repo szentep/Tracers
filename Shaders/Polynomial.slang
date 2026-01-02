@@ -7,9 +7,13 @@
 // Utility class and functions to represent and evaluate polynomials
 //
 
-// Evaluation scheme for the monomial basis
+// Default evaluation schemes
 #ifndef EVALUATION_SCHEME_MONOMIAL
 #define EVALUATION_SCHEME_MONOMIAL Horner
+#endif
+
+#ifndef EVALUATION_SCHEME_BERNSTEIN
+#define EVALUATION_SCHEME_BERNSTEIN deCasteljau
 #endif
 
 // ------------------------------------------------------------------
@@ -72,6 +76,23 @@ struct Polynomial
         return result;
     }
 
+    float ChudySimple(float t)
+    {
+        float h = 1.0;
+        const float t1 = 1.0 - t;
+        float q = coeffs[0];
+        [[unroll]]
+        for (int k = 1; k <= N; ++k)
+        {
+            h *= t * (N + 1 - k);
+            h /= (k * t1 + h);
+            //float h1 = 1.0 - h;
+            //q = h1 * q + h * coeffs[k];
+            q = lerp(q, coeffs[k], h);
+        }
+        return q;
+    }
+
     float deCasteljau(float t)
     {
         float q[N + 1];
@@ -114,7 +135,7 @@ struct Polynomial
     #if SELECTED_BASIS == BASIS_ID_MONOMIAL
         return EVALUATION_SCHEME_MONOMIAL(t);
     #elif SELECTED_BASIS == BASIS_ID_BERNSTEIN
-        return deCasteljau(t);
+        return EVALUATION_SCHEME_BERNSTEIN(t);
     #endif
     }
 
