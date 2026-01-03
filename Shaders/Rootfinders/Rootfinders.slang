@@ -5,6 +5,7 @@
 
 #include "RayMarch.slang"
 #include "YukselBracketed.slang"
+#include "LUTrace.slang"
 
 cbuffer RootFinderCB
 {

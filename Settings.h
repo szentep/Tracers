@@ -30,8 +30,9 @@ enum class EvaluationScemeBernstein
 
 enum class PolynomialRootFinder
 {
-    rayMarch,               // Raymarching on the polynomial
-    YukselBracketed,        // Yuksel's method
+    rayMarch,        // Raymarching on the polynomial
+    YukselBracketed, // Yuksel's method
+    LUTrace,         // Trace the polynomial by determining Lipschitz constant using the LU approximatiton
 };
 
 enum class NodeType
@@ -77,7 +78,7 @@ public:
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
     NodeType nodeType = NodeType::CHEBYSHEV;
-    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
+    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::LUTrace;
 
     // Surface settings
     SurfaceType surfaceType = SurfaceType::calyx;
@@ -128,6 +129,7 @@ private:
     void renderProgramUI(Gui* pGui);
     void renderRayMarchUI(Gui* pGui);
     void renderYukselUI(Gui* pGui);
+    void renderLUTraceUI(Gui* pGui);
 
     void renderSceneUI(Gui* pGui);
     void renderCameraUI(Gui* pGui);

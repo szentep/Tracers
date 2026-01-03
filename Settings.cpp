@@ -84,6 +84,20 @@ void Settings::renderYukselUI(Gui* pGui)
     ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.5f");
 }
 
+void Settings::renderLUTraceUI(Gui* pGui)
+{
+    ImGui::Text("Fitting Basis: Bernstein");
+    selectedBasis = FittingBasis::BERNSTEIN;
+    // Nodes must be on [0,1]
+    ImGui::Text("Node type: Normalized Chebyshev");
+    nodeType = NodeType::NORMALIZED_CHEBYSHEV;
+    // Use fast evaluation
+    ImGui::Text("Eval.Sceme: Chudy's geometric");
+    evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
+
+    ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.7f");
+}
+
 void Settings::renderProgramUI(Gui* pGui)
 {
     auto programGroup = Gui::Group(pGui, "Program settings", true);
@@ -101,6 +115,10 @@ void Settings::renderProgramUI(Gui* pGui)
             else if (polynomialRootFinder == PolynomialRootFinder::YukselBracketed)
             {
                 renderYukselUI(pGui);
+            }
+            else if (polynomialRootFinder == PolynomialRootFinder::LUTrace)
+            {
+                renderLUTraceUI(pGui);
             }
         }
         else if (renderMode == RenderMode::rayMarchScene)

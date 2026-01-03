@@ -6,7 +6,7 @@
 //
 
 #ifndef POLYNOMIAL_DEGREE
-#define POLYNOMIAL_DEGREE 1
+#define POLYNOMIAL_DEGREE 6
 #endif
 
 // Render mode

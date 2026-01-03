@@ -84,11 +84,8 @@ struct Polynomial
         [[unroll]]
         for (int k = 1; k <= N; ++k)
         {
-            h *= t * (N + 1 - k);
-            h /= (k * t1 + h);
-            //float h1 = 1.0 - h;
-            //q = h1 * q + h * coeffs[k];
-            q = lerp(q, coeffs[k], h);
+            h *= t * (N + 1 - k) / k;
+            q = q * t1 + h * coeffs[k];
         }
         return q;
     }
@@ -153,6 +150,23 @@ struct Polynomial
 		}
         return value;
     }
+
+    // compute first derivative of the polynomial
+    Polynomial derivativePolynomial()
+    {
+        Polynomial der;
+        [[unroll]]
+        for (int i = 0; i < POLYNOMIAL_DEGREE; ++i) // degree of derivative is POLYNOMIAL_DEGREE - 1
+        {
+            #if SELECTED_BASIS == BASIS_ID_MONOMIAL
+                der[i] = (i + 1) * coeffs[i + 1];
+            #elif SELECTED_BASIS == BASIS_ID_BERNSTEIN
+                der[i] = POLYNOMIAL_DEGREE * (coeffs[i + 1] - coeffs[i]);
+            #endif
+        }
+        return der;
+    }
+
 }
 
 #endif // POLYNOMIAL

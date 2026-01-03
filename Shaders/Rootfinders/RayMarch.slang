@@ -28,11 +28,7 @@ float refinePolynomialIntersection(Polynomial p, float t, float fMin, float last
 //        Coefficient poly[i] is multiplied by x^i.
 // \param begin The beginning of the search interval
 // \param end The end of search interval.
-// \param begin_value The value of the given polynomial at begin.
-// \param error_tolerance The error tolerance for the returned root location.
-//        Typically the error will be much lower but in theory it can be
-//        bigger.
-// \return true if a root was found, false if no root exists.
+// \return the root and set hit to true if root was found, false if no root exists
 float rayMarch(const Polynomial poly, float begin, float end, inout bool hit)
 {
     float t = begin;
