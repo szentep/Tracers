@@ -167,6 +167,8 @@ float4 mainImage(float2 fragCoord)
     // Gamma Correction
     finalColor = pow(finalColor, float3(.5));
 
+    if (any(DEBUG_COLOR != 0.xxx)) finalColor = DEBUG_COLOR;
+
     return float4(finalColor, 1.0);
 }
 
