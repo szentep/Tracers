@@ -14,7 +14,7 @@ float L_func(Polynomial der, float t, float m)
 {
     float c0 = der.coeffs[0];
     float cn = der.coeffs[POLYNOMIAL_DEGREE - 1];
-    return m + (c0 - m) * pow(1.0 - t, POLYNOMIAL_DEGREE) + (cn - m) * pow(t, POLYNOMIAL_DEGREE);
+    return m + (c0 - m) * pow(1.0 - t, POLYNOMIAL_DEGREE - 1) + (cn - m) * pow(t, POLYNOMIAL_DEGREE - 1);
 }
 
 // Upper bound function U(t, curve)
@@ -22,7 +22,7 @@ float U_func(Polynomial der, float t, float M)
 {
     float c0 = der.coeffs[0];
     float cn = der.coeffs[POLYNOMIAL_DEGREE - 1];
-    return M + (c0 - M) * pow(1.0 - t, POLYNOMIAL_DEGREE) + (cn - M) * pow(t, POLYNOMIAL_DEGREE);
+    return M + (c0 - M) * pow(1.0 - t, POLYNOMIAL_DEGREE - 1) + (cn - M) * pow(t, POLYNOMIAL_DEGREE - 1);
 }
 
 // Calculates min and max Lipschitz constants
@@ -71,6 +71,7 @@ struct StepResult
 {
     float step;
     float f_val;
+    float L;
 };
 
 // The Heuristic Lipschitz step function
@@ -80,10 +81,9 @@ StepResult LU_lipschitz_step(Polynomial poly, float min_L, float max_L, float t)
 
     res.f_val = poly.at(t);
 
-    //float L = (res.f_val < 0.0) ? (max_L) : (min_L);
-    float L = max(abs(max_L), abs(min_L));
+    res.L = (res.f_val < 0.0) ? max_L : min_L;
 
-    res.step = (L == 0.0) ? 0.0 : abs(res.f_val) / L;
+    res.step = (res.L == 0.0) ? 0.0 : abs(res.f_val / res.L);
 
     return res;
 }
@@ -104,19 +104,19 @@ float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
         StepResult curr = LU_lipschitz_step(poly, min_L, max_L, t);
 
         // Check convergence
-        if (abs(curr.f_val) < errorTolerance) // TODO use distance from the root
+        if (abs(curr.f_val) < errorTolerance * abs(curr.L)) // Approximate distance from the root
         {
             hit = true;
             return t;
         }
 
         float delta = ALPHA * curr.step;
-        /*
+        
         // Guess ahead
         StepResult guess = LU_lipschitz_step(poly, min_L, max_L, t + delta);
 
         // Check if guess landed on root
-        if (abs(guess.f_val) < errorTolerance) // TODO use distance from the root
+        if (abs(guess.f_val) < errorTolerance * abs(guess.L)) // Approximate distance from the root 
         {
             hit = true;
             return t + delta;
@@ -131,7 +131,7 @@ float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
         {
             delta = delta + guess.step;
         }
-        */
+
         t += delta;
     }
 
