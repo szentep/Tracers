@@ -26,7 +26,7 @@ float L_func(const int degree, float t, float c0, float cn, float m)
 // Upper bound function U(t, curve)
 float U_func(const int degree, float t, float c0, float cn, float M)
 {
-    return M + (M - c0) * pow(1.0 - t, degree) + (M - cn) * pow(t, degree);
+    return M - (M - c0) * pow(1.0 - t, degree) - (M - cn) * pow(t, degree);
 }
 
 // Find min (m) and max (M) of control points
