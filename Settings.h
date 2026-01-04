@@ -102,6 +102,8 @@ public:
     {
         int32_t maxRaymarchingSteps = 1000;
         int32_t binarySearchIterations = 8;
+        int32_t maxLUIterations = 10000;
+        int32_t earlyOutOptimizationLevel = 0; // 0: none; 1: convex hull; 2: bounder
     } traceSettings;
 
     struct RootFinderSettings

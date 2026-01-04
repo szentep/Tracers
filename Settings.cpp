@@ -47,6 +47,8 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
     // Raymarching Control
     program->addDefine("MAX_RAYMARCHING_STEPS", std::to_string(traceSettings.maxRaymarchingSteps));
     program->addDefine("BINARY_SEARCH_ITERATIONS", std::to_string(traceSettings.binarySearchIterations));
+    program->addDefine("MAX_LU_ITERATIONS", std::to_string(traceSettings.maxLUIterations));
+    program->addDefine("EARLY_OUT", std::to_string(traceSettings.earlyOutOptimizationLevel));
 
     // Root finder
     program->addDefine("POLY_ROOTFINDER", std::string(magic_enum::enum_name(polynomialRootFinder)));
@@ -86,11 +88,18 @@ void Settings::renderYukselUI(Gui* pGui)
 
 void Settings::renderLUTraceUI(Gui* pGui)
 {
+    ImGui::InputInt("Maximum steps", &traceSettings.maxLUIterations, 100);
+
+    static const char* earlyOutItems[] = { "None", "Absolute bound", "Bound extrema" };
+    ImGui::ListBox("Early out optimization", &traceSettings.earlyOutOptimizationLevel, earlyOutItems, 3);
+
     ImGui::Text("Fitting Basis: Bernstein");
     selectedBasis = FittingBasis::BERNSTEIN;
+
     // Nodes must be on [0,1]
     ImGui::Text("Node type: Normalized Chebyshev");
     nodeType = NodeType::NORMALIZED_CHEBYSHEV;
+
     // Use fast evaluation
     ImGui::Text("Eval.Sceme: Chudy's geometric");
     evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
