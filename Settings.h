@@ -74,14 +74,15 @@ public:
 
     // Render settings
     RenderMode renderMode = RenderMode::polynomialFitting;
+    bool useEFTFitting = false;
     FittingBasis selectedBasis = FittingBasis::MONOMIAL;
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
     NodeType nodeType = NodeType::CHEBYSHEV;
-    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::LUTrace;
+    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
 
     // Surface settings
-    SurfaceType surfaceType = SurfaceType::calyx;
+    SurfaceType surfaceType = SurfaceType::endrassOctic;
     std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
         {SurfaceType::barthSextic, {6}},
         {SurfaceType::endrassOctic, {8}},

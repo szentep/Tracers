@@ -43,6 +43,10 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
     program->addDefine("EVALUATION_SCHEME_BERNSTEIN", std::string(magic_enum::enum_name(evalScemeBernstein)));
     program->addDefine("SELECTED_BASIS", std::to_string(magic_enum::enum_integer(selectedBasis)));
     program->addDefine("NODE_TYPE_FOR_FITTING", std::to_string(magic_enum::enum_integer(nodeType)));
+    if (useEFTFitting)
+        program->addDefine("EFT_FITTING");
+    else
+        program->removeDefine("EFT_FITTING");
 
     // Raymarching Control
     program->addDefine("MAX_RAYMARCHING_STEPS", std::to_string(traceSettings.maxRaymarchingSteps));
@@ -82,6 +86,8 @@ void Settings::renderYukselUI(Gui* pGui)
 {
     ImGui::Text("Fitting Basis: Monomial");
     selectedBasis = FittingBasis::MONOMIAL;
+    ImGui::Text("Node type: Chebyshev");
+    nodeType = NodeType::CHEBYSHEV;
 
     ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.5f");
 }
@@ -115,6 +121,8 @@ void Settings::renderProgramUI(Gui* pGui)
         imGuiEnumSelector("Render mode", renderMode);
         if (renderMode == RenderMode::polynomialFitting)
         {
+            programGroup.checkbox("USE EFT fitting", useEFTFitting);
+
             // Root finder specific settings
             imGuiEnumSelector("Root finder", polynomialRootFinder);
             if (polynomialRootFinder == PolynomialRootFinder::rayMarch)

@@ -2,6 +2,7 @@
 #define POLYNOMIAL
 
 #include "Settings.slang"
+#include "EFT.slang"
 
 //
 // Utility class and functions to represent and evaluate polynomials
@@ -16,42 +17,6 @@
 #define EVALUATION_SCHEME_BERNSTEIN deCasteljau
 #endif
 
-// ------------------------------------------------------------------
-// Error-Free Transformations (EFT)
-// ------------------------------------------------------------------
-
-// returns (hi, lo) with hi+lo = a+b exactly
-precise float2 twoSum(float a, float b)
-{
-    precise float s = a + b;                 // 1 op  (rounded sum)
-    precise float bb = s - a;                // 2 op
-    precise float aa = s - bb;               // 3 op
-    precise float err = (a - aa) + (b - bb); // 4 & 5 ops
-    return float2(s, err);                   // pair is exact
-}
-
-// Computes p = fl(a * b) and error e using FMA.
-precise float2 twoProd(float a, float b)
-{
-    precise float p = a * b;
-    precise float e = mad(a, b, -p);
-    return float2(p, e);
-}
-
-// re-normalize so |lo| ≤ ½ ulp(hi)
-float2 renorm(float2 x) 
-{
-    float2 t = twoSum(x.x, x.y);
-    return float2(t.x, t.y); // hi = t.x, lo = t.y  (non-overlap)
-}
-
-// add two DS numbers, return DS
-float2 dsAdd(float2 a, float2 b) 
-{
-    float2 s = twoSum(a.x, b.x); // add highs
-    float lo = a.y + b.y + s.y;  // collect low parts
-    return renorm(float2(s.x, lo));
-}
 
 struct Polynomial
 {
@@ -84,8 +49,21 @@ struct Polynomial
         [[unroll]]
         for (int k = 1; k <= N; ++k)
         {
+            /*
             h *= t * (N + 1 - k) / k;
-            q = q * t1 + h * coeffs[k];
+            q = q * t1 + h * coeffs[k]; //*/
+            /*
+            h *= t * (N + 1 - k);
+            h /= (k * t1 + h);
+            float h1 = 1 - h;
+            q = h1 * q + h * coeffs[k]; //*/
+            //*
+            h *= t * (N + 1 - k);
+            float x = k * t1;
+            float d = x + h;
+            float h1 = x / d;
+            h /= d;
+            q = h1 * q + h * coeffs[k];//*/
         }
         return q;
     }

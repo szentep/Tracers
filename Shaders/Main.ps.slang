@@ -161,6 +161,7 @@ float4 mainImage(float2 fragCoord)
     {
         float3 hitPos = ray.at(dist);
         float3 normal = calculateSurfaceNormal(hitPos);
+        if (dot(normal, ray.dir) > 0) normal *= -1;
         finalColor = CalculateBlinnPhong(hitPos, normal, -ray.dir); // View direction is ray direction
     }
 

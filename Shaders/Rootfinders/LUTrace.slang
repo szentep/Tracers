@@ -13,7 +13,7 @@
 #define EARLY_OUT 0
 #endif
 
-static const float ALPHA = 1.0; // relaxation parameter
+static const float ALPHA = 1.5; // relaxation parameter
 
 static float3 DEBUG_COLOR = float3(0);
 

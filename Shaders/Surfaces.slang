@@ -6,6 +6,8 @@
 // The surface is defined where the functions return 0
 //
 
+#include "Settings.slang"
+
 
 // Calculates the surface normal using Forward Differences
 
