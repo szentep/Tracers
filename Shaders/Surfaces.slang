@@ -56,7 +56,8 @@ float barthSextic(float3 p)
 // - ((8 (2 + sqrt(2)) z^2 + 2 (2 + 7 sqrt(2))) (x^2 + y^2) - 4 (1 + sqrt(2)) (x^2 + y^2)^2 - 16 z^4 + 8 (1 - 2 sqrt(2)) z^2 - 12 sqrt(2) - 1)^2 = 0
 float endrassOctic(float3 p)
 {
-    p *= 5.0; // Scale
+    p *= 2.0; // Scale
+
     const float S2 = sqrt(2);
     float x2 = p.x * p.x;
     float y2 = p.y * p.y;
@@ -73,11 +74,48 @@ float endrassOctic(float3 p)
     return termA - inner * inner;
 }
 
+// Equation:
+// (5ϕ + 3)(r^2 - 1)^2(r^2 + ϕ - 2)^2 + 8(x^4 - 2x^2y^2 - 2x^2z^2 + y^4 - 2y^2z^2 + z^4)(x^2 - y^2ϕ^4)(z^2 - x^2ϕ^4)(y^2 - z^2ϕ^4) = 0
+float barthDecic(float3 p)
+{
+    p *= 2.; // Scale to fit in unified bounding sphere
+
+    // Constants
+    const static float PHI  = 1.61803398;
+    const static float PHI4 = pow(PHI, 4); // PHI^4
+    const static float K1   = 5. * PHI + 3.; // 5*PHI + 3
+    
+    float x2 = p.x * p.x;
+    float y2 = p.y * p.y;
+    float z2 = p.z * p.z;
+    float x4 = x2 * x2;
+    float y4 = y2 * y2;
+    float z4 = z2 * z2;
+    float r2 = x2 + y2 + z2;
+
+    // First Term: (5ϕ + 3) * (r^2 - 1)^2 * (r^2 + ϕ - 2)^2
+    float sphereA = r2 - 1.0;
+    float sphereB = r2 + PHI - 2.0;
+    float term1 = K1 * (sphereA * sphereA) * (sphereB * sphereB);
+
+    // Second Term symmetric polynomial: (x^4 + y^4 + z^4 - 2(x^2y^2 + x^2z^2 + y^2z^2))
+    // This is equivalent to r^4 - 4(x^2y^2 + y^2z^2 + z^2x^2)
+    float symPart = x4 + y4 + z4 - 2.0 * (x2 * y2 + x2 * z2 + y2 * z2);
+
+    // Second Term product part: (x^2 - y^2ϕ^4) (z^2 - x^2ϕ^4) (y^2 - z^2ϕ^4)
+    float cyclicPart = (x2 - y2 * PHI4) * (z2 - x2 * PHI4) * (y2 - z2 * PHI4);
+
+    float term2 = 8.0 * symPart * cyclicPart;
+
+    return term1 + term2;
+}
+
 // Surfaces from https://homepage.univie.ac.at/herwig.hauser/bildergalerie/gallery.html
 
 // x2 + y2 z3 = z4
 float calyx(float3 p)
 {
+    p *= 1.; // Scale to fit in unified bounding sphere
     float y3 = p.y * p.y * p.y;
     return p.x * p.x + y3 * (p.z * p.z - p.y);
 }

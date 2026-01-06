@@ -1216,7 +1216,7 @@ Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degre
     for (int i = 0; i <= degree; ++i)
     {
     #if defined(EFT_FITTING) 
-        //* Based on Ogita, Rump and Oishi in double the working precision
+        /* Based on Ogita, Rump and Oishi in double the working precision
         float2 res = {0.0, 0.0};
         float corr = 0.0;
         [[unroll]]
@@ -1230,9 +1230,9 @@ Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degre
 
             res = dsAdd(res, prod);
         }
-        poly.coeffs[i] = res.x + corr;
+        poly.coeffs[i] = res.x;
         //*/
-        /* Error-Free Transformations and ill-conditioned problems, Siegfried M. Rump
+        //* Error-Free Transformations and ill-conditioned problems, Siegfried M. Rump
         // Generate summands
         float p[2*POLYNOMIAL_DEGREE+2];
         [[unroll]]
@@ -1241,8 +1241,8 @@ Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degre
             float2 coeff = GetFittingCoefficient(i, j);
 
             float2 prod = twoProd(coeff.x, samples[j]);
-            //float2 prod_lo = twoProd(coeff.y, samples[j]);
-            //prod = dsAdd(prod, prod_lo);
+            float2 prod_lo = twoProd(coeff.y, samples[j]);
+            prod = dsAdd(prod, prod_lo);
 
             p[2*j] = prod.x;
             p[2*j+1] = prod.y;
@@ -1288,7 +1288,34 @@ Polynomial fitPolynomial(Ray ray)
         float node = GetNode(i);
         samples[i] = SURFACE_FUNCTION(ray.atNormalized(node));
     }
-    return interpolatePolynomial(samples);
+    /*/ Normalization
+    float max_s = 0.0;
+    for (int i = 0; i <= POLYNOMIAL_DEGREE; ++i)
+    {
+        max_s = max(max_s, abs(samples[i]));
+    }
+    max_s = exp2((int)ceil(log2(max_s)));
+    for (int i = 0; i <= POLYNOMIAL_DEGREE; ++i)
+    {
+        samples[i] /= max_s;
+    }
+    //*/
+    Polynomial poly = interpolatePolynomial(samples);
+
+#if DEBUG_MODE == DEBUG_POLY_AT_SAMPLES
+    float max_err = 0.0;
+    [[unroll]]
+    for (int i = 1; i < POLYNOMIAL_DEGREE; ++i) {
+        float node = GetNode(i);
+        float f_val = SURFACE_FUNCTION(ray.atNormalized(node)); // Original function value
+        float p_val = poly.at(node);// * max_s;                 // Polynomial approximation value
+        float rel_err = abs((f_val - p_val)); // absolute error
+        max_err = max(max_err, rel_err);
+    }
+    DEBUG_COLOR = float3(smoothstep(0, errorThreshold, max_err), 0, 0); // convert errors to color for visualization
+#endif
+
+    return poly;
 }
 
 #endif // POLYNOMIAL_FITTING

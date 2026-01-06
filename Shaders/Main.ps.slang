@@ -92,7 +92,14 @@ float polynomialFitting(Ray ray, inout bool hit)
     #if NODE_TYPE_FOR_FITTING == CHEBYSHEV_NODES
         intersect = 0.5 * intersect + 0.5; // Chebyshev nodes are in [-1,1], remap to [0,1]
     #endif
-    return lerp(ray.tMin, ray.tMax, intersect);
+    float dist = lerp(ray.tMin, ray.tMax, intersect);
+
+    #if DEBUG_MODE == DEBUG_POLY_AT_INTERSECT
+        bool marchHit = false;
+        float marchDist = rayMarchScene(ray, marchHit);
+    #endif
+
+    return dist;
 }
 
 // returns distance to intersection along ray, sets hit to true if intersection occurs
@@ -168,7 +175,19 @@ float4 mainImage(float2 fragCoord)
     // Gamma Correction
     finalColor = pow(finalColor, float3(.5));
 
-    if (any(DEBUG_COLOR != 0.xxx)) finalColor = DEBUG_COLOR;
+    if (any(DEBUG_COLOR != 0.xxx))
+    {
+        //finalColor = pow(finalColor, float3(.4));
+
+        finalColor = dot(finalColor, float3(0.299, 0.587, 0.114)); // make grayscale
+        finalColor.r += DEBUG_COLOR.r; // Add debug color
+
+        // New luminance
+        float newLum = dot(finalColor, float3(0.299, 0.587, 0.114));
+
+        // Compensate to preserve gray
+        finalColor -= (newLum - finalColor);
+    }
 
     return float4(finalColor, 1.0);
 }

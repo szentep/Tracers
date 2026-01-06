@@ -14,6 +14,7 @@ void Settings::uploadData(const Falcor::ShaderVar& vars, Falcor::ref<Falcor::Pro
 {
     uploadRootFinderData(vars["RootFinderCB"]);
     uploadLightData(vars["LightCB"]);
+    uploadSettingsData(vars["SettingsCB"]);
     addDefines(program);
 }
 
@@ -29,6 +30,11 @@ void Settings::uploadLightData(const Falcor::ShaderVar& vars) const
     vars["colDiffuse"] = lightingSettings.colDiffuse;
     vars["colSpecular"] = lightingSettings.colSpecular;
     vars["shininess"] = lightingSettings.shininess;
+}
+
+void Settings::uploadSettingsData(const Falcor::ShaderVar& vars) const
+{
+    vars["errorThreshold"] = errorThreshold;
 }
 
 void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
@@ -47,6 +53,8 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
         program->addDefine("EFT_FITTING");
     else
         program->removeDefine("EFT_FITTING");
+    // Debug mode
+    program->addDefine("DEBUG_MODE",std::to_string(magic_enum::enum_integer(debugMode)));
 
     // Raymarching Control
     program->addDefine("MAX_RAYMARCHING_STEPS", std::to_string(traceSettings.maxRaymarchingSteps));
@@ -136,6 +144,12 @@ void Settings::renderProgramUI(Gui* pGui)
             else if (polynomialRootFinder == PolynomialRootFinder::LUTrace)
             {
                 renderLUTraceUI(pGui);
+            }
+
+            imGuiEnumSelector("Debug mode", debugMode);
+            if (debugMode == DebugMode::DEBUG_POLY_AT_SAMPLES)
+            {
+                ImGui::InputFloat("Error threshold", &errorThreshold, 0.0001f, 0.01f, "%.8f");
             }
         }
         else if (renderMode == RenderMode::rayMarchScene)

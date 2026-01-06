@@ -45,6 +45,7 @@ enum class SurfaceType
 {
     barthSextic,
     endrassOctic,
+    barthDecic,
     calyx,
     geisha,
     calypso,
@@ -55,6 +56,13 @@ enum class SurfaceType
 struct SurfaceProperties
 {
     uint32_t degree;
+};
+
+enum class DebugMode
+{
+    DEBUG_OFF = 0,               // Disable everythinig
+    DEBUG_POLY_AT_SAMPLES = 1,   // Show error of polynomial values at sample points
+    DEBUG_POLY_AT_INTERSECT = 2, // Compare function values at the intersection points
 };
 
 class Settings
@@ -70,6 +78,7 @@ public:
     void uploadData(const Falcor::ShaderVar& vars, Falcor::ref<Falcor::Program> program) const;
     void uploadRootFinderData(const Falcor::ShaderVar& vars) const;
     void uploadLightData(const Falcor::ShaderVar& vars) const;
+    void uploadSettingsData(const Falcor::ShaderVar& vars) const;
     void addDefines(Falcor::ref<Falcor::Program> program) const;
 
     // Render settings
@@ -80,12 +89,16 @@ public:
     EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
     NodeType nodeType = NodeType::CHEBYSHEV;
     PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
+    // Debug settings
+    DebugMode debugMode = DebugMode::DEBUG_POLY_AT_SAMPLES;
+    float errorThreshold = 0.001f;
 
     // Surface settings
     SurfaceType surfaceType = SurfaceType::endrassOctic;
     std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
         {SurfaceType::barthSextic, {6}},
         {SurfaceType::endrassOctic, {8}},
+        {SurfaceType::barthDecic, {10}},
         {SurfaceType::calyx, {5}},
         {SurfaceType::geisha, {4}},
         {SurfaceType::calypso, {3}},

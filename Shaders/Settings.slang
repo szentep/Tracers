@@ -5,6 +5,11 @@
 // GPU-side implementation of the Settings class
 //
 
+cbuffer SettingsCB
+{
+    float errorThreshold;
+};
+
 #ifndef POLYNOMIAL_DEGREE
 #define POLYNOMIAL_DEGREE 6
 #endif
@@ -60,5 +65,16 @@
 #ifndef POLY_ROOTFINDER
 #define POLY_ROOTFINDER rayMarch
 #endif
+
+// Debug modes
+#define DEBUG_OFF 0
+#define DEBUG_POLY_AT_SAMPLES 1
+#define DEBUG_POLY_AT_INTERSECT 2
+
+#ifndef DEBUG_MODE
+#define DEBUG_MODE DEBUG_OFF
+#endif
+
+static float3 DEBUG_COLOR = float3(0); // TODO this hould be somewhere else?
 
 #endif // SETTINGS

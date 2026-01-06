@@ -15,8 +15,6 @@
 
 static const float ALPHA = 1.5; // relaxation parameter
 
-static float3 DEBUG_COLOR = float3(0);
-
 // Lower bound function L(t, curve)
 float L_func(const int degree, float t, float c0, float cn, float m)
 {
