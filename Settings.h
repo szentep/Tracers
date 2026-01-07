@@ -84,17 +84,17 @@ public:
     // Render settings
     RenderMode renderMode = RenderMode::polynomialFitting;
     bool useEFTFitting = false;
-    FittingBasis selectedBasis = FittingBasis::MONOMIAL;
+    FittingBasis selectedBasis = FittingBasis::BERNSTEIN;
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
-    NodeType nodeType = NodeType::CHEBYSHEV;
-    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
+    NodeType nodeType = NodeType::NORMALIZED_CHEBYSHEV;
+    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::LUTrace;
     // Debug settings
-    DebugMode debugMode = DebugMode::DEBUG_POLY_AT_SAMPLES;
+    DebugMode debugMode = DebugMode::DEBUG_OFF;
     float errorThreshold = 0.001f;
 
     // Surface settings
-    SurfaceType surfaceType = SurfaceType::endrassOctic;
+    SurfaceType surfaceType = SurfaceType::distel;
     std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
         {SurfaceType::barthSextic, {6}},
         {SurfaceType::endrassOctic, {8}},
@@ -122,7 +122,7 @@ public:
 
     struct RootFinderSettings
     {
-        float errorTolerance = 1e-3f;
+        float errorTolerance = 1e-5f;
     } rootfinderSettings;
 
     struct CameraSettings

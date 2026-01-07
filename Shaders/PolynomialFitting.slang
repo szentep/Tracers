@@ -1216,7 +1216,7 @@ Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degre
     for (int i = 0; i <= degree; ++i)
     {
     #if defined(EFT_FITTING) 
-        /* Based on Ogita, Rump and Oishi in double the working precision
+        //* Based on Ogita, Rump and Oishi in double the working precision
         float2 res = {0.0, 0.0};
         float corr = 0.0;
         [[unroll]]
@@ -1232,7 +1232,7 @@ Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degre
         }
         poly.coeffs[i] = res.x;
         //*/
-        //* Error-Free Transformations and ill-conditioned problems, Siegfried M. Rump
+        /* Error-Free Transformations and ill-conditioned problems, Siegfried M. Rump
         // Generate summands
         float p[2*POLYNOMIAL_DEGREE+2];
         [[unroll]]
@@ -1248,7 +1248,7 @@ Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degre
             p[2*j+1] = prod.y;
         }
         // sumK
-        const static int KK = 10; 
+        const static int KK = 1; 
         for (int k = 0; k < KK; ++k)
         {
             // Vecsum

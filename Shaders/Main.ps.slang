@@ -177,8 +177,7 @@ float4 mainImage(float2 fragCoord)
 
     if (any(DEBUG_COLOR != 0.xxx))
     {
-        //finalColor = pow(finalColor, float3(.4));
-
+    #if DEBUG_MODE == DEBUG_POLY_AT_SAMPLES
         finalColor = dot(finalColor, float3(0.299, 0.587, 0.114)); // make grayscale
         finalColor.r += DEBUG_COLOR.r; // Add debug color
 
@@ -187,6 +186,9 @@ float4 mainImage(float2 fragCoord)
 
         // Compensate to preserve gray
         finalColor -= (newLum - finalColor);
+    #else
+        finalColor = DEBUG_COLOR;
+    #endif
     }
 
     return float4(finalColor, 1.0);

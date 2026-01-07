@@ -13,7 +13,7 @@
 #define EARLY_OUT 0
 #endif
 
-static const float ALPHA = 1.5; // relaxation parameter
+static const float ALPHA = 1.9; // relaxation parameter
 
 // Lower bound function L(t, curve)
 float L_func(const int degree, float t, float c0, float cn, float m)
@@ -57,7 +57,11 @@ void min_max_derivativeControlPoints(const Polynomial poly, const int degree, ou
 }
 
 // Use the lower and upper bounders to figure out what are the extrema of the lower and upper bounding functions
-void get_lower_upper_extrema(const float c0, const float cn, const float m, const float M, const int degree, out float lower_extrema, out float upper_extrema)
+void get_lower_upper_extrema(
+    const float c0, const float cn,
+    const float m, const float M,
+    const int degree,
+    out float lower_extrema, out float upper_extrema)
 {
     // Compute location and value of the extrema of the lower bound m + (c0 - m) * (1-t)^n + (cn - m) * t^n
     lower_extrema = min(c0, cn);
@@ -65,7 +69,7 @@ void get_lower_upper_extrema(const float c0, const float cn, const float m, cons
     if (m != c0)
     {
         float ratio = (cn - m) / (c0 - m);
-        lower_min_t = 1.0 / (1.0 + pow(ratio, 1.0 / (degree)));
+        lower_min_t = 1.0 / ( 1.0 + pow(ratio, 1.0 / degree) );
         lower_extrema = min(lower_extrema, L_func(degree, lower_min_t, c0, cn, m));
     }
 
@@ -75,13 +79,46 @@ void get_lower_upper_extrema(const float c0, const float cn, const float m, cons
     if (M != cn)
     {
         float ratio = (M - cn) / (M - c0);
-        upper_max_t = 1.0 / ( 1.0 + pow(ratio, 1.0 / (degree) ) );
+        upper_max_t = 1.0 / ( 1.0 + pow(ratio, 1.0 / degree) );
+        upper_extrema = max(upper_extrema, U_func(degree, upper_max_t, c0, cn, M));
+    }
+}
+
+// Use the lower and upper bounders to figure out what are the extrema of the lower and upper bounding functions
+// specify the [a,b] interval to calculate for a range
+void get_lower_upper_extrema(
+    const float c0, const float cn,
+    const float m, const float M,
+    const int degree,
+    float a, float b,
+    out float lower_extrema, out float upper_extrema
+    )
+{
+    // Compute location and value of the extrema of the lower bound m + (c0 - m) * (1-t)^n + (cn - m) * t^n
+    lower_extrema = min(L_func(degree, a, c0, cn, m), L_func(degree, b, c0, cn, m));
+    float lower_min_t = (lower_extrema == c0) ? 0.0 : 1.0;
+    if (m != c0)
+    {
+        float ratio = (cn - m) / (c0 - m);
+        lower_min_t = 1.0 / ( 1.0 + pow(ratio, 1.0 / degree) );
+        clamp(lower_min_t, a, b);
+        lower_extrema = min(lower_extrema, L_func(degree, lower_min_t, c0, cn, m));
+    }
+
+    // Compute location and value of the extrema of the upper bound M - (M - c0) * (1-t)^n - (M - cn) * t^n
+    upper_extrema = max(U_func(degree, a, c0, cn, M), U_func(degree, b, c0, cn, M));
+    float upper_max_t = (upper_extrema == c0) ? 0.0 : 1.0;
+    if (M != cn)
+    {
+        float ratio = (M - cn) / (M - c0);
+        upper_max_t = 1.0 / ( 1.0 + pow(ratio, 1.0 / degree) );
+        clamp(upper_max_t, a, b);
         upper_extrema = max(upper_extrema, U_func(degree, upper_max_t, c0, cn, M));
     }
 }
 
 // Calculates a Lipschitz bound of the input polynomial, using the extrema bounds of its
-// derivative polynomial. The derivative is bounded using the proposed method. 
+// derivative polynomial. The derivative is bounded using the proposed method.
 float min_max_derivativeLipschitz(const Polynomial poly, const int degree)
 {
     float m, M;
@@ -92,15 +129,19 @@ float min_max_derivativeLipschitz(const Polynomial poly, const int degree)
     float der_last  = degree * (poly[degree] - poly[degree-1]);
 
     // Calculate the extrema of the lower bounding generalized paraboloids
-    float lower_extrema = min(der_first, der_last);
-    float upper_extrema = max(der_first, der_last);
+    float lower_extrema, upper_extrema;
     get_lower_upper_extrema(der_first, der_last, m, M, degree-1, lower_extrema, upper_extrema);
 
-    return max(abs(lower_extrema), abs(upper_extrema));
+    // Use Lipschitz-constant
+    //return max(abs(lower_extrema), abs(upper_extrema));
+
+    // Use the one-sided Lipschitz-constant
+    float f_val = poly.at(0);
+    return (f_val < 0) ? abs(upper_extrema) : abs(lower_extrema);
 }
 
 // Use the lower and upper bounders to figure out what are the extrema of the function over [a, b]
-float min_max_bound(const Polynomial poly, const int degree, float a, float b)
+float min_max_bound(const Polynomial poly, const int degree, float f_val, float a, float b)
 {
     float m, M;
     min_max_derivativeControlPoints(poly, degree, m, M);
@@ -110,27 +151,30 @@ float min_max_bound(const Polynomial poly, const int degree, float a, float b)
     float der_last  = degree * (poly[degree] - poly[degree-1]);
 
     // Calculate the extrema of the lower bounding generalized paraboloids
-    float lower_extrema = min(der_first, der_last);
-    float upper_extrema = max(der_first, der_last);
-    get_lower_upper_extrema(der_first, der_last, m, M, degree-1, lower_extrema, upper_extrema);
+    float lower_extrema, upper_extrema;
+    get_lower_upper_extrema(der_first, der_last, m, M, degree-1, a, b, lower_extrema, upper_extrema);
 
+    // Use Lipschitz-constant
     return max(abs(lower_extrema), abs(upper_extrema));
+
+    // Use the one-sided Lipschitz-constant
+    //return (f_val < 0) ? abs(upper_extrema) : abs(lower_extrema);
 }
 
 struct StepResult
 {
     float step;
     float f_val;
-    float L;
 };
 
 // The Heuristic Lipschitz step function
-StepResult LU_lipschitz_step(Polynomial poly, float L, float t)
+StepResult LU_lipschitz_step(const Polynomial poly, float L, float t)
 {
     StepResult res;
 
     res.f_val = poly.at(t);
 
+    //L = min_max_bound(poly, poly.N, res.f_val, t, 1); // override Lipschitz-constat with value on [t, 1]
     res.step = (L == 0.0) ? 0.0 : abs(res.f_val) / L;
 
     return res;
@@ -164,50 +208,38 @@ float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
         hit = false;
         return end;
     }
+
+    // TODO move begin to L/U intersect
 #endif
 
-
     float t = begin;
+    float prev_step = 0;
+    float delta = 0;
 
-    // Tracing loop with relaxation and step back
+    // Keinert’s relaxed trace algorithm
     for (int i = 0; i < MAX_LU_ITERATIONS && t < end; ++i)
     {
         // Calculate current state at t
-        StepResult curr = LU_lipschitz_step(poly, L, t);
+        float guess = t + delta;
+        StepResult curr = LU_lipschitz_step(poly, L, guess);
 
         // Check convergence
         if (abs(curr.f_val) < errorTolerance * L) // Approximate distance from the root
         {
             hit = true;
-            return t;
+            return guess;
         }
 
-        float delta = ALPHA * curr.step;
-        
-        // Guess ahead
-        StepResult guess = LU_lipschitz_step(poly, L, t + delta);
-
-        // Check if guess landed on root
-        if (abs(guess.f_val) < errorTolerance * abs(guess.L)) // Approximate distance from the root 
-        {
-            hit = true;
-            return t + delta;
+        // stepback needed
+        if (delta > prev_step + curr.step) {
+            delta = prev_step;
+        } else { // apply step
+            t = guess;
+            delta = ALPHA * curr.step;
+            prev_step = curr.step;
         }
-
-        // Do step back if we overshot
-        if ((t + curr.step) < (t + delta - guess.step))
-        {
-            delta = curr.step;
-        }
-        else
-        {
-            delta = delta + guess.step;
-        }
-
-        t += delta;
     }
 
-    hit = false;
     return end;
 }
 

@@ -49,6 +49,7 @@ struct Polynomial
         [[unroll]]
         for (int k = 1; k <= N; ++k)
         {
+            // (1-t) * a + t * b = fma(b, t, fma(a, -t, a))
             /*
             h *= t * (N + 1 - k) / k;
             q = q * t1 + h * coeffs[k]; //*/
