@@ -30,7 +30,7 @@ bool newton_bisection(inout float out_root,
                       float end,
                       float begin_value)
 {
-    static const int MAX_ITERATIONS = 32;
+    static const int MAX_ITERATIONS = 16;
 
 	if (begin == end)
 	{
@@ -79,20 +79,19 @@ bool newton_bisection(inout float out_root,
 //        Coefficient poly[i] is multiplied by x^i.
 // \param begin The beginning of an interval where the polynomial is monotonic.
 // \param end The end of said interval.
-// \param begin_value The value of the given polynomial at begin.
 // \param error_tolerance The error tolerance for the returned root location.
 //        Typically the error will be much lower but in theory it can be
 //        bigger.
 // \return true if a root was found, false if no root exists.
-bool newton_bisection_with_surface(
+bool bisection_with_surface(
     inout float out_root, 
     inout float out_end_value,
-    Polynomial poly, 
     float begin, 
-    float end,
-    float begin_value)
+    float end)
 {
     static const int MAX_ITERATIONS = 32;
+
+    float begin_value = SURFACE_FUNCTION(rootfinderRay.atNormalized(begin));
 
     if (begin == end)
     {
@@ -100,34 +99,26 @@ bool newton_bisection_with_surface(
         return false;
     }
     // Evaluate the polynomial at the end of the interval
-    out_end_value = poly.at(end);
+    out_end_value = SURFACE_FUNCTION(rootfinderRay.atNormalized(end));
     // If the values at both ends have the same non-zero sign, there is no root
     if (begin_value * out_end_value > 0.0)
         return false;
-    // Otherwise, we find the root iteratively using Newton bisection (with
-    // bounded iteration count)
+    // Otherwise, we find the root iteratively using bisection (with bounded iteration count)
     float current = 0.5 * (begin + end);
     [[loop]]
     for (int i = 0; i != MAX_ITERATIONS; ++i)
     {
-        // Evaluate the polynomial and its derivative
-        float derivative;
-        float value = poly.valueAndDerivativeAt(current, derivative);
-        // Replace function value with surface function evaluation
-        value = SURFACE_FUNCTION(rootfinderRay.atNormalized(current));
+        // Replace polynomial with surface function evaluation
+        float value = SURFACE_FUNCTION(rootfinderRay.atNormalized(current));
 
         // Shorten the interval
         bool right = begin_value * value > 0.0;
         begin = right ? current : begin;
         end = right ? end : current;
-        // Apply Newton's method
-        float guess = current - value / derivative;
-        // Pick a guess
         float middle = 0.5 * (begin + end);
-        float next = (begin <= guess && guess <= end) ? guess : middle;
         // Move along or terminate
-        bool done = abs(next - current) < errorTolerance;
-        current = next;
+        bool done = abs(middle - current) < errorTolerance;
+        current = middle;
         if (done)
             break;
     }
@@ -237,7 +228,7 @@ void YukselBracketed(
 			float root;
             #ifdef USE_SURFACE_EVALUATION_IN_YUKSEL
             bool root_found = (degree == POLYNOMIAL_DEGREE) ?
-                newton_bisection_with_surface(root, begin_value, derivative, current_begin, current_end, begin_value) :
+                bisection_with_surface(root, begin_value, current_begin, current_end) :
                 newton_bisection(root, begin_value, derivative, current_begin, current_end, begin_value);
             #else
                  bool root_found = newton_bisection(root, begin_value, derivative, current_begin, current_end, begin_value);
