@@ -6,11 +6,14 @@
 #include "RayMarch.slang"
 #include "YukselBracketed.slang"
 #include "LUTrace.slang"
+#include "../Ray.slang"
 
 cbuffer RootFinderCB
 {
     float errorTolerance;
 };
+
+static Ray rootfinderRay; // Used for cheating function values
 
 // ------------------------------------------------------------------
 // Unified rootfinder Interfaces

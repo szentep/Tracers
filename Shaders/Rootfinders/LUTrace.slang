@@ -13,7 +13,7 @@
 #define EARLY_OUT 0
 #endif
 
-static const float ALPHA = 1.9; // relaxation parameter
+static const float ALPHA = 1.8; // relaxation parameter
 
 // Lower bound function L(t, curve)
 float L_func(const int degree, float t, float c0, float cn, float m)
@@ -57,6 +57,7 @@ void min_max_derivativeControlPoints(const Polynomial poly, const int degree, ou
 }
 
 // Use the lower and upper bounders to figure out what are the extrema of the lower and upper bounding functions
+// for the derivative
 void get_lower_upper_extrema(
     const float c0, const float cn,
     const float m, const float M,
@@ -85,6 +86,7 @@ void get_lower_upper_extrema(
 }
 
 // Use the lower and upper bounders to figure out what are the extrema of the lower and upper bounding functions
+// for the derivative
 // specify the [a,b] interval to calculate for a range
 void get_lower_upper_extrema(
     const float c0, const float cn,
@@ -140,7 +142,7 @@ float min_max_derivativeLipschitz(const Polynomial poly, const int degree)
     return (f_val < 0) ? abs(upper_extrema) : abs(lower_extrema);
 }
 
-// Use the lower and upper bounders to figure out what are the extrema of the function over [a, b]
+// Use the lower and upper bounders for the derivative to figure out what are the extrema of the function over [a, b]
 float min_max_bound(const Polynomial poly, const int degree, float f_val, float a, float b)
 {
     float m, M;
@@ -159,6 +161,66 @@ float min_max_bound(const Polynomial poly, const int degree, float f_val, float 
 
     // Use the one-sided Lipschitz-constant
     //return (f_val < 0) ? abs(upper_extrema) : abs(lower_extrema);
+}
+
+// Clip the interval [0,1] to the region where the one-sided lower and upper bounds cross zero
+// return false if no crossing occurs
+bool clipInterval(
+    const float c0, const float cn,
+    const float m, const float M,
+    const int degree,
+    out float lower_extrema, out float upper_extrema)
+{
+    lower_extrema = 0;
+    upper_extrema = 1;
+
+    // Lower left
+    if (m != c0)
+    {
+        float ratio = m / (m - c0);
+        if (ratio > 0)
+        {
+            float t = 1 - pow(ratio, 1 / degree);
+            lower_extrema = max(lower_extrema, t);
+        }
+        else return false;
+    }
+    // Upper left
+    if (M != c0)
+    {
+        float ratio = M / (M - c0);
+        if (ratio > 0)
+        {
+            float t = 1 - pow(ratio, 1 / degree);
+            lower_extrema = max(lower_extrema, t);
+        }
+        else return false;
+    }
+
+    // Lower right
+    if (m != cn)
+    {
+        float ratio = m / (m - cn);
+        if (ratio > 0)
+        {
+            float t = pow(ratio, 1 / degree);
+            upper_extrema = min(upper_extrema, t);
+        }
+        else return false;
+    }
+    // Upper right
+    if (M != cn)
+    {
+        float ratio = M / (M - cn);
+        if (ratio > 0)
+        {
+            float t = pow(ratio, 1 / degree);
+            upper_extrema = min(upper_extrema, t);
+        }
+        else return false;
+    }
+
+    return true;
 }
 
 struct StepResult
@@ -200,6 +262,7 @@ float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
 
     // Early-out 2: check if the extrema of the lower bound crosses the zero level
 #if EARLY_OUT >= 2
+    // Use two-sided extrema on the derivative bounds
     float minF, maxF;
     get_lower_upper_extrema(poly[0], poly[poly.N], m, M, poly.N, minF, maxF);
     if (minF > errorTolerance || maxF < -errorTolerance)
@@ -209,7 +272,18 @@ float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
         return end;
     }
 
-    // TODO move begin to L/U intersect
+    // Use one-sided extrema on the function bounds
+    bool intersectionPossible = clipInterval(poly[0], poly[poly.N], m, M, poly.N, minF, maxF);
+    if (!intersectionPossible)
+    {
+        DEBUG_COLOR = float3(0,0,1);
+        hit = false;
+        return end;
+    }
+
+    // move begin to L/U intersect
+    begin = max(begin, minF);
+    end = min(end, maxF);
 #endif
 
     float t = begin;

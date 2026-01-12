@@ -63,7 +63,7 @@ cbuffer SettingsCB
 
 // Type of rootfinding method for polynomials
 #ifndef POLY_ROOTFINDER
-#define POLY_ROOTFINDER rayMarch
+#define POLY_ROOTFINDER YukselBracketed
 #endif
 
 // Debug modes

@@ -56,7 +56,7 @@ float barthSextic(float3 p)
 // - ((8 (2 + sqrt(2)) z^2 + 2 (2 + 7 sqrt(2))) (x^2 + y^2) - 4 (1 + sqrt(2)) (x^2 + y^2)^2 - 16 z^4 + 8 (1 - 2 sqrt(2)) z^2 - 12 sqrt(2) - 1)^2 = 0
 float endrassOctic(float3 p)
 {
-    p *= 2.0; // Scale
+    p *= 3; // Scale
 
     const float S2 = sqrt(2);
     float x2 = p.x * p.x;
@@ -78,7 +78,7 @@ float endrassOctic(float3 p)
 // (5ϕ + 3)(r^2 - 1)^2(r^2 + ϕ - 2)^2 + 8(x^4 - 2x^2y^2 - 2x^2z^2 + y^4 - 2y^2z^2 + z^4)(x^2 - y^2ϕ^4)(z^2 - x^2ϕ^4)(y^2 - z^2ϕ^4) = 0
 float barthDecic(float3 p)
 {
-    p *= 2.; // Scale to fit in unified bounding sphere
+    p *= 2; // Scale to fit in unified bounding sphere
 
     // Constants
     const static float PHI  = 1.61803398;

@@ -53,6 +53,10 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
         program->addDefine("EFT_FITTING");
     else
         program->removeDefine("EFT_FITTING");
+    if (useSurfaceEvaluationInYuksel)
+        program->addDefine("USE_SURFACE_EVALUATION_IN_YUKSEL");
+    else
+        program->removeDefine("USE_SURFACE_EVALUATION_IN_YUKSEL");
     // Debug mode
     program->addDefine("DEBUG_MODE",std::to_string(magic_enum::enum_integer(debugMode)));
 
@@ -96,6 +100,7 @@ void Settings::renderYukselUI(Gui* pGui)
     selectedBasis = FittingBasis::MONOMIAL;
     ImGui::Text("Node type: Chebyshev");
     nodeType = NodeType::CHEBYSHEV;
+    ImGui::Checkbox("Use surface evaluation", &useSurfaceEvaluationInYuksel);
 
     ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.5f");
 }

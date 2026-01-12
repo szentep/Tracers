@@ -86,6 +86,7 @@ float polynomialFitting(Ray ray, inout bool hit)
     #endif
 
     // Find first root on the interval using raymarch
+    rootfinderRay = ray; // set global ray for surface evaluation
     float intersect = POLY_ROOTFINDER(poly, begin, 1.0, hit);
 
     // scale back t to world coordinates

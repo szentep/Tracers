@@ -5,6 +5,7 @@
 
 #include "../Polynomial.slang"
 #include "Rootfinders.slang"
+#include "../Surfaces.slang"
 
 // When there are fewer intersections/roots than theoretically possible, some
 // array entries are set to this value
@@ -70,13 +71,77 @@ bool newton_bisection(inout float out_root,
 	return true;
 }
 
+// Searches a single root of a polynomial within a given interval.
+// uses the surface function to evaluate the polynomial
+// \param out_root The location of the found root.
+// \param out_end_value The value of the given polynomial at end.
+// \param poly Coefficients of the polynomial for which a root should be found.
+//        Coefficient poly[i] is multiplied by x^i.
+// \param begin The beginning of an interval where the polynomial is monotonic.
+// \param end The end of said interval.
+// \param begin_value The value of the given polynomial at begin.
+// \param error_tolerance The error tolerance for the returned root location.
+//        Typically the error will be much lower but in theory it can be
+//        bigger.
+// \return true if a root was found, false if no root exists.
+bool newton_bisection_with_surface(
+    inout float out_root, 
+    inout float out_end_value,
+    Polynomial poly, 
+    float begin, 
+    float end,
+    float begin_value)
+{
+    static const int MAX_ITERATIONS = 32;
+
+    if (begin == end)
+    {
+        out_end_value = begin_value;
+        return false;
+    }
+    // Evaluate the polynomial at the end of the interval
+    out_end_value = poly.at(end);
+    // If the values at both ends have the same non-zero sign, there is no root
+    if (begin_value * out_end_value > 0.0)
+        return false;
+    // Otherwise, we find the root iteratively using Newton bisection (with
+    // bounded iteration count)
+    float current = 0.5 * (begin + end);
+    [[loop]]
+    for (int i = 0; i != MAX_ITERATIONS; ++i)
+    {
+        // Evaluate the polynomial and its derivative
+        float derivative;
+        float value = poly.valueAndDerivativeAt(current, derivative);
+        // Replace function value with surface function evaluation
+        value = SURFACE_FUNCTION(rootfinderRay.atNormalized(current));
+
+        // Shorten the interval
+        bool right = begin_value * value > 0.0;
+        begin = right ? current : begin;
+        end = right ? end : current;
+        // Apply Newton's method
+        float guess = current - value / derivative;
+        // Pick a guess
+        float middle = 0.5 * (begin + end);
+        float next = (begin <= guess && guess <= end) ? guess : middle;
+        // Move along or terminate
+        bool done = abs(next - current) < errorTolerance;
+        current = next;
+        if (done)
+            break;
+    }
+    out_root = current;
+    return true;
+}
+
 // Finds all roots of the given polynomial in the interval [begin, end] and
 // writes them to out_roots. Some entries will be NO_INTERSECTION but other
 // than that the array is sorted. The last entry is always NO_INTERSECTION.
-void YukselBracketed(inout float out_roots[POLYNOMIAL_DEGREE + 1], 
-                const Polynomial poly, 
-                float begin, 
-                float end)
+void YukselBracketed(
+    inout float out_roots[POLYNOMIAL_DEGREE + 1], 
+    const Polynomial poly, 
+    float begin, float end)
 {
     // Construct the quadratic derivative of the polynomial. We divide each
     // derivative by the factorial of its order, such that the constant
@@ -170,7 +235,14 @@ void YukselBracketed(inout float out_roots[POLYNOMIAL_DEGREE + 1],
 
             // Try to find a root
 			float root;
-			if (newton_bisection(root, begin_value, derivative, current_begin, current_end, begin_value))
+            #ifdef USE_SURFACE_EVALUATION_IN_YUKSEL
+            bool root_found = (degree == POLYNOMIAL_DEGREE) ?
+                newton_bisection_with_surface(root, begin_value, derivative, current_begin, current_end, begin_value) :
+                newton_bisection(root, begin_value, derivative, current_begin, current_end, begin_value);
+            #else
+                 bool root_found = newton_bisection(root, begin_value, derivative, current_begin, current_end, begin_value);
+            #endif
+			if (root_found)
 			{
 				out_roots[i] = root;
 			}
