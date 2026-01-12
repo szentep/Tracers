@@ -51,11 +51,24 @@ enum class SurfaceType
     calypso,
     distel,
     flirt,
+    torus,
+    buggle,
+    sphere,
+    sphere16,
+};
+
+enum class CameraMode
+{
+    Orbit,
+    Measurement,
+    Free,
 };
 
 struct SurfaceProperties
 {
     uint32_t degree;
+    Falcor::float3 cameraPosition = Falcor::float3(0.f, 0.f, -1.f);
+    Falcor::float3 cameraTarget = Falcor::float3(0.f);
 };
 
 enum class DebugMode
@@ -74,6 +87,7 @@ public:
     ~Settings() {};
 
     void renderUI(Gui* pGui);
+    void renderCameraUI(Gui* pGui, Falcor::ref<Falcor::Camera> camera);
 
     void uploadData(const Falcor::ShaderVar& vars, Falcor::ref<Falcor::Program> program) const;
     void uploadRootFinderData(const Falcor::ShaderVar& vars) const;
@@ -89,8 +103,7 @@ public:
     EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
     NodeType nodeType = NodeType::NORMALIZED_CHEBYSHEV;
     PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
-        // Yuksel
-        bool useSurfaceEvaluationInYuksel = true;
+
     // Debug settings
     DebugMode debugMode = DebugMode::DEBUG_OFF;
     float errorThreshold = 0.001f;
@@ -98,19 +111,25 @@ public:
     // Surface settings
     SurfaceType surfaceType = SurfaceType::endrassOctic;
     std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
-        {SurfaceType::barthSextic, {6}},
+        {SurfaceType::barthSextic, {6, {.55, 0., -1.}}},
         {SurfaceType::endrassOctic, {8}},
-        {SurfaceType::barthDecic, {10}},
-        {SurfaceType::calyx, {5}},
-        {SurfaceType::geisha, {4}},
-        {SurfaceType::calypso, {3}},
-        {SurfaceType::distel, {6}},
-        {SurfaceType::flirt, {4}},
+        {SurfaceType::barthDecic, {10, {0., -.25, -.7}}},
+        {SurfaceType::calyx, {5, {1., 0., -.8}}},
+        {SurfaceType::geisha, {4, {.5, -.5, -.5}, {0., -.3, 0.}}},
+        {SurfaceType::calypso, {3, {1., .5, -1.}}},
+        {SurfaceType::distel, {6, {1., .5, -1.}}},
+        {SurfaceType::flirt, {4, {1., .5, -1.}}},
+        {SurfaceType::torus, {4, {1., 0., -1.7}}},
+        {SurfaceType::buggle, {6, {.2, 1., -2.}}},
+        {SurfaceType::sphere, {2, {0., 0., -2.4}}},
+        {SurfaceType::sphere16, {16, {2.3, 1., -1.}}},
     };
 
+    // Default window size
     const static uint32_t windowWidth = 1280;
     const static uint32_t windowHeight = 720;
 
+    // Default GUI
     Falcor::uint2 guiSize = {300, windowHeight - 150};
     Falcor::uint2 guiPos = {0, 0};
 
@@ -124,13 +143,15 @@ public:
 
     struct RootFinderSettings
     {
-        float errorTolerance = 1e-5f;
+        float errorTolerance = 1e-5f; // Error tolerance for root value
+        // Yuksel rootfinder
+        bool useSurfaceEvaluationInYuksel = true;
     } rootfinderSettings;
 
     struct CameraSettings
     {
-        bool orbit = true;
-        Falcor::float3 startPosition = Falcor::float3(0.f, 0.f, -3.f);
+        CameraMode cameraMode = CameraMode::Orbit;
+        Falcor::float3 startPosition = Falcor::float3(0.f, 0.f, -2.f);
         Falcor::float3 startTarget = Falcor::float3(0.f, 0.f, 0.f);
     } cameraSettings;
 
@@ -150,7 +171,6 @@ private:
     void renderLUTraceUI(Gui* pGui);
 
     void renderSceneUI(Gui* pGui);
-    void renderCameraUI(Gui* pGui);
     void renderShadingUI(Gui* pGui);
 
     // Draw an ImGui combo box for selecting enum values using magic_enum

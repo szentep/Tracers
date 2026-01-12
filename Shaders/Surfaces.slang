@@ -147,11 +147,61 @@ float geisha(float3 p)
     return p.x * p.x * p.z * (p.y + p.z) - p.y * p.y * p.y * (1. + p.z);
 }
 
-// 
-float a(float3 p)
+// (x2 + y2 + z2 + R2 - r2)^2 = 4 * R2 * (x2 + y2)
+float torus(float3 p)
 {
-    
-    return 0;
+    const static float R = .7, r = .2;
+    const static float R2 = R*R, r2 = r*r;
+
+    float x2 = p.x * p.x;
+    float y2 = p.y * p.y;
+    float z2 = p.z * p.z;
+    float lxy = x2 + y2;
+
+    float term1 = lxy + z2 + R2 - r2;
+    float term2 = 4 * R2 * lxy;
+
+    return term1 * term1 - term2;
+}
+
+// x2 * y2 * (x2 + y2 - 1) + z4 = 0
+float buggle(float3 p)
+{
+    p = 1.1 * p.xzy; // Scale to fit in unified bounding sphere
+
+    float x2 = p.x * p.x;
+    float y2 = p.y * p.y;
+    float z2 = p.z * p.z;
+
+    return x2 * y2 * (x2 + y2 - 1.) + z2 * z2;
+}
+
+// x2 + y2 + z2 = R2
+float sphere(float3 p)
+{
+    const static float R = 1.0;
+    const static float R2 = R * R;
+
+    float x2 = p.x * p.x;
+    float y2 = p.y * p.y;
+    float z2 = p.z * p.z;
+
+    return (x2 + y2 + z2) - R2;
+}
+
+// x16 + y16 + z16 = R16
+float sphere16(float3 p)
+{
+    const static int N = 16;
+    const static float R = .6;
+    const static float RN = pow(R, N);
+
+    p *= p; // 2
+    p *= p; // 4
+    p *= p; // 8
+    p *= p; //16
+
+    return (p.x + p.y + p.z) - RN;
 }
 
 #endif // SURFACES

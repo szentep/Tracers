@@ -13,7 +13,7 @@
 #define EARLY_OUT 0
 #endif
 
-static const float ALPHA = 1.8; // relaxation parameter
+static const float ALPHA = 1.6; // relaxation parameter
 
 // Lower bound function L(t, curve)
 float L_func(const int degree, float t, float c0, float cn, float m)

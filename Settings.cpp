@@ -6,7 +6,6 @@ void Settings::renderUI(Gui* pGui)
 {
     renderProgramUI(pGui);
     renderSceneUI(pGui);
-    renderCameraUI(pGui);
     renderShadingUI(pGui);
 }
 
@@ -53,7 +52,7 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
         program->addDefine("EFT_FITTING");
     else
         program->removeDefine("EFT_FITTING");
-    if (useSurfaceEvaluationInYuksel)
+    if (rootfinderSettings.useSurfaceEvaluationInYuksel)
         program->addDefine("USE_SURFACE_EVALUATION_IN_YUKSEL");
     else
         program->removeDefine("USE_SURFACE_EVALUATION_IN_YUKSEL");
@@ -100,7 +99,7 @@ void Settings::renderYukselUI(Gui* pGui)
     selectedBasis = FittingBasis::MONOMIAL;
     ImGui::Text("Node type: Chebyshev");
     nodeType = NodeType::CHEBYSHEV;
-    ImGui::Checkbox("Use surface evaluation", &useSurfaceEvaluationInYuksel);
+    ImGui::Checkbox("Use surface evaluation", &rootfinderSettings.useSurfaceEvaluationInYuksel);
 
     ImGui::InputFloat("Error tolerance", &rootfinderSettings.errorTolerance, 1e-5f, 1e-3f, "%.5f");
 }
@@ -179,12 +178,14 @@ void Settings::renderSceneUI(Gui* pGui)
     }
 }
 
-void Settings::renderCameraUI(Gui* pGui)
+void Settings::renderCameraUI(Gui* pGui, Falcor::ref<Falcor::Camera> camera)
 {
     auto cameraGroup = Gui::Group(pGui, "Camera settings");
     if (cameraGroup.open())
     {
-        cameraGroup.checkbox("Orbit camera", cameraSettings.orbit);
+        imGuiEnumSelector("Camera mode", cameraSettings.cameraMode);
+
+        camera->renderUI(cameraGroup);
 
         cameraGroup.release();
     }

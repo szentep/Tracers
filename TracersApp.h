@@ -37,4 +37,5 @@ private:
     ref<Camera> camera = nullptr;
     FirstPersonCameraController fpCameraController;
     void resetCamera();
+    void updateCamera(Falcor::ShaderVar PsCB);
 };
