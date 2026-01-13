@@ -52,10 +52,14 @@ void Settings::addDefines(Falcor::ref<Falcor::Program> program) const
         program->addDefine("EFT_FITTING");
     else
         program->removeDefine("EFT_FITTING");
+    // Use surface evaluation at last level of Yuksel
     if (rootfinderSettings.useSurfaceEvaluationInYuksel)
         program->addDefine("USE_SURFACE_EVALUATION_IN_YUKSEL");
     else
         program->removeDefine("USE_SURFACE_EVALUATION_IN_YUKSEL");
+    // LU trace bound type
+    program->addDefine("LU_TRACE_BOUND_TYPE", std::string(magic_enum::enum_name(traceSettings.luTraceBoundType)));
+
     // Debug mode
     program->addDefine("DEBUG_MODE",std::to_string(magic_enum::enum_integer(debugMode)));
 
@@ -110,6 +114,8 @@ void Settings::renderLUTraceUI(Gui* pGui)
 
     static const char* earlyOutItems[] = { "None", "Absolute bound", "Bound extrema" };
     ImGui::ListBox("Early out optimization", &traceSettings.earlyOutOptimizationLevel, earlyOutItems, 3);
+
+    imGuiEnumSelector("Bound type", traceSettings.luTraceBoundType);
 
     ImGui::Text("Fitting Basis: Bernstein");
     selectedBasis = FittingBasis::BERNSTEIN;

@@ -35,6 +35,12 @@ enum class PolynomialRootFinder
     LUTrace,         // Trace the polynomial by determining Lipschitz constant using the LU approximatiton
 };
 
+enum class LUTraceBoundType
+{
+    LU_BOUND = 0,           // LU functions
+    CONTROL_POINT_BOUND = 1 // min/max of control points
+};
+
 enum class NodeType
 {
     CHEBYSHEV = 0,            // Chebyshev nodes on [-1,1]
@@ -102,7 +108,7 @@ public:
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
     NodeType nodeType = NodeType::NORMALIZED_CHEBYSHEV;
-    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
+    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::LUTrace;
 
     // Debug settings
     DebugMode debugMode = DebugMode::DEBUG_OFF;
@@ -139,6 +145,7 @@ public:
         int32_t binarySearchIterations = 8;
         int32_t maxLUIterations = 10000;
         int32_t earlyOutOptimizationLevel = 0; // 0: none; 1: convex hull; 2: bounder
+        LUTraceBoundType luTraceBoundType = LUTraceBoundType::LU_BOUND;
     } traceSettings;
 
     struct RootFinderSettings
@@ -150,7 +157,7 @@ public:
 
     struct CameraSettings
     {
-        CameraMode cameraMode = CameraMode::Orbit;
+        CameraMode cameraMode = CameraMode::Measurement;
         Falcor::float3 startPosition = Falcor::float3(0.f, 0.f, -2.f);
         Falcor::float3 startTarget = Falcor::float3(0.f, 0.f, 0.f);
     } cameraSettings;

@@ -13,6 +13,17 @@
 #define EARLY_OUT 0
 #endif
 
+// Bounding function
+#ifndef LU_TRACE_BOUND_TYPE
+#define LU_TRACE_BOUND_TYPE LU_BOUND
+#endif
+#ifndef LU_BOUND
+#define LU_BOUND 0
+#endif
+#ifndef CONTROL_POINT_BOUND
+#define CONTROL_POINT_BOUND 1
+#endif
+
 static const float ALPHA = 1.6; // relaxation parameter
 
 // Lower bound function L(t, curve)
@@ -258,7 +269,13 @@ float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
 #endif
 
     // Compute bounds on the derivative
+#if LU_TRACE_BOUND_TYPE == LU_BOUND
     float L = min_max_derivativeLipschitz(poly, poly.N);
+#elif LU_TRACE_BOUND_TYPE == CONTROL_POINT_BOUND
+    float minP, MaxP;
+    min_max_derivativeControlPoints(poly, poly.N, minP, MaxP);
+    float L = max(abs(minP), abs(MaxP));
+#endif
 
     // Early-out 2: check if the extrema of the lower bound crosses the zero level
 #if EARLY_OUT >= 2
