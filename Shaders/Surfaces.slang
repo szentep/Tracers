@@ -35,7 +35,7 @@ float barthSextic(float3 p)
 
     // Constants specific to Barth Sextic
     const float PHI = 1.61803398;
-    const float PHI2 = 2.61803398;    // PHI^2
+    const float PHI2 = 2.61803398;   // PHI^2
     const float BARTH_K = 4.23606798; // (1 + 2*PHI)
 
     float x2 = p.x * p.x;
@@ -43,11 +43,11 @@ float barthSextic(float3 p)
     float z2 = p.z * p.z;
 
     // 4 * (phi^2*x^2 - y^2)(phi^2*y^2 - z^2)(phi^2*z^2 - x^2)
-    float term1 = 4.0 * (PHI2 * x2 - y2) * (PHI2 * y2 - z2) * (PHI2 * z2 - x2);
+    float term1 = 4 * (PHI2 * x2 - y2) * (PHI2 * y2 - z2) * (PHI2 * z2 - x2);
 
     // (1 + 2phi) * (x^2 + y^2 + z^2 - 1)^2
     float r2 = x2 + y2 + z2;
-    float term2 = BARTH_K * (r2 - 1.0) * (r2 - 1.0);
+    float term2 = BARTH_K * (r2 - 1) * (r2 - 1);
 
     return term1 - term2;
 }
@@ -81,9 +81,9 @@ float barthDecic(float3 p)
     p *= 2; // Scale to fit in unified bounding sphere
 
     // Constants
-    const static float PHI  = 1.61803398;
-    const static float PHI4 = pow(PHI, 4); // PHI^4
-    const static float K1   = 5. * PHI + 3.; // 5*PHI + 3
+    const float PHI  = 1.61803398;
+    const float PHI4 = pow(PHI, 4); // PHI^4
+    const float K1   = 5. * PHI + 3.; // 5*PHI + 3
     
     float x2 = p.x * p.x;
     float y2 = p.y * p.y;
@@ -137,7 +137,8 @@ float distel(float3 p)
 float flirt(float3 p)
 {
     p = 1.2 * p.xzy; // rotate and scale
-    return p.x * p.x * (1. - p.x) + p.y * p.y * (1. + p.y * p.y) + p.z * p.z * p.z * (1. - 10.*p.z);
+    float y2 = p.y * p.y;
+    return p.x * p.x * (1. - p.x) + y2 * (1. + y2) + p.z * p.z * p.z * (1. - 10.*p.z);
 }
 
 // x2 yz + x2 z2 = y3 z + y3
@@ -150,8 +151,8 @@ float geisha(float3 p)
 // (x2 + y2 + z2 + R2 - r2)^2 = 4 * R2 * (x2 + y2)
 float torus(float3 p)
 {
-    const static float R = .7, r = .2;
-    const static float R2 = R*R, r2 = r*r;
+    const float R = .7, r = .2;
+    const float R2 = R*R, r2 = r*r;
 
     float x2 = p.x * p.x;
     float y2 = p.y * p.y;
@@ -179,7 +180,7 @@ float buggle(float3 p)
 // x2 + y2 + z2 = R2
 float sphere(float3 p)
 {
-    const static float R = 1.0;
+    const static float R = .9999;
     const static float R2 = R * R;
 
     float x2 = p.x * p.x;

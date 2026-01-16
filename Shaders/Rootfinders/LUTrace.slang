@@ -241,7 +241,7 @@ struct StepResult
 };
 
 // The Heuristic Lipschitz step function
-StepResult LU_lipschitz_step(const Polynomial poly, float L, float t)
+StepResult LU_lipschitz_step(const Polynomial poly, float L, float t, float m, float M)
 {
     StepResult res;
 
@@ -250,16 +250,47 @@ StepResult LU_lipschitz_step(const Polynomial poly, float L, float t)
     //L = min_max_bound(poly, poly.N, res.f_val, t, 1); // override Lipschitz-constat with value on [t, 1]
     res.step = (L == 0.0) ? 0.0 : abs(res.f_val) / L;
 
+    /*
+    if (res.f_val >= 0)
+    {
+        float ratio = m / (m - res.f_val);
+        if (ratio > 0)
+        {
+            // t + (1 - t) * (1 - pow(ratio, 1 / poly.N));
+            float root = 1 + (t - 1) * pow(ratio, 1 / poly.N);
+            res.step = max(res.step, root - t);
+        }
+        else
+        {
+            res.step = 1 - t;
+        }
+    }
+    else
+    {
+        float ratio = M / (M - res.f_val);
+        if (ratio > 0)
+        {
+            float root = 1 + (t - 1) * pow(ratio, 1 / poly.N);
+            res.step = max(res.step, root - t);
+        }
+        else
+        {
+            res.step = t;
+        }
+    }
+    //*/
+
     return res;
 }
 
 // Root finder
 float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
 {
-    // Early-out 1: check if all coefficients are of the same sign
-#if EARLY_OUT >= 1
     float m, M;
     min_max_controlPoints(poly, m, M);
+
+    // Early-out 1: check if all coefficients are of the same sign
+#if EARLY_OUT >= 1
     if (m > errorTolerance || M < -errorTolerance)
     {
         DEBUG_COLOR = float3(0,1,0);
@@ -308,11 +339,12 @@ float LUTrace(const Polynomial poly, float begin, float end, inout bool hit)
     float delta = 0;
 
     // Keinert’s relaxed trace algorithm
+    [[loop]]
     for (int i = 0; i < MAX_LU_ITERATIONS && t < end; ++i)
     {
         // Calculate current state at t
         float guess = t + delta;
-        StepResult curr = LU_lipschitz_step(poly, L, guess);
+        StepResult curr = LU_lipschitz_step(poly, L, guess, m, M);
 
         // Check convergence
         if (abs(curr.f_val) < errorTolerance * L) // Approximate distance from the root

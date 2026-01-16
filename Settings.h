@@ -108,7 +108,7 @@ public:
     EvaluationScemeMonomial evalSchemeMonomial = EvaluationScemeMonomial::Horner;
     EvaluationScemeBernstein evalScemeBernstein = EvaluationScemeBernstein::ChudySimple;
     NodeType nodeType = NodeType::NORMALIZED_CHEBYSHEV;
-    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::LUTrace;
+    PolynomialRootFinder polynomialRootFinder = PolynomialRootFinder::YukselBracketed;
 
     // Debug settings
     DebugMode debugMode = DebugMode::DEBUG_OFF;

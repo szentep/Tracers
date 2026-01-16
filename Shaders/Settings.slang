@@ -75,6 +75,6 @@ cbuffer SettingsCB
 #define DEBUG_MODE DEBUG_OFF
 #endif
 
-static float3 DEBUG_COLOR = float3(0); // TODO this hould be somewhere else?
+static float3 DEBUG_COLOR = float3(0);
 
 #endif // SETTINGS

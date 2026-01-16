@@ -162,8 +162,8 @@ float4 mainImage(float2 fragCoord)
     // Ray-Surface Intersection
     bool hit = false;
     float dist = raySurfaceIntersection(ray, hit);
-    
-    float3 finalColor = float3(0.1, 0.1, 0.15); // Background Color
+
+    float3 finalColor = float3(1.0); // Background Color
     
     if(hit)
     {

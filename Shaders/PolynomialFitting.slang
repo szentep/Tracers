@@ -1212,7 +1212,7 @@ float GetFittingCoefficient(int i, int j)
 Polynomial interpolatePolynomial(float samples[POLYNOMIAL_DEGREE + 1], int degree = POLYNOMIAL_DEGREE)
 {
     Polynomial poly;
-    [[unroll]]
+    [[loop]]
     for (int i = 0; i <= degree; ++i)
     {
     #if defined(EFT_FITTING) 
