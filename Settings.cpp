@@ -34,6 +34,7 @@ void Settings::uploadLightData(const Falcor::ShaderVar& vars) const
 void Settings::uploadSettingsData(const Falcor::ShaderVar& vars) const
 {
     vars["errorThreshold"] = errorThreshold;
+    vars["LIP_CONST"] = surfaceProperties.at(surfaceType).LIP_CONST;
 }
 
 void Settings::addDefines(Falcor::ref<Falcor::Program> program) const

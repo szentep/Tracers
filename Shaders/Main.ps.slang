@@ -75,6 +75,30 @@ float rayMarchScene(Ray ray, inout bool hit)
     return dist;
 }
 
+// Sphere trace scene using global Lipschitz constant
+float sphereTraceScene(Ray ray, inout bool hit)
+{
+    hit = false;
+    float dist = raySphereIntersect(ray, float3(0.0), BOUNDING_SPHERE_RADIUS);
+    if (dist < 0.0) return 0.0; // No intersection with bounding sphere
+
+    for(int i = 0; i < MAX_RAYMARCHING_STEPS * 10; i++)
+    {
+        float3 p = ray.at(dist);
+        if (length(p) > BOUNDING_SPHERE_RADIUS * 1.1f) break;
+        float f_val = SURFACE_FUNCTION(p);
+        if (abs(f_val) < errorThreshold)
+        {
+            hit = true;
+            break;
+        }
+        dist += abs(f_val) / LIP_CONST; // Sphere tracing step
+        if (dist > MAX_DIST) break;
+    }
+
+    return dist;
+}
+
 float polynomialFitting(Ray ray, inout bool hit)
 {
     Polynomial poly = fitPolynomial(ray);

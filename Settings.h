@@ -8,6 +8,7 @@ enum class RenderMode
 {
     rayMarchScene = 0,     // Direct raytracing on the function
     polynomialFitting = 1, // Fit a polynomial and use a rootfinder
+    sphereTraceScene = 2,  // Sphere trace using global Lipschitz bound
 };
 
 enum class FittingBasis
@@ -75,6 +76,7 @@ struct SurfaceProperties
     uint32_t degree;
     Falcor::float3 cameraPosition = Falcor::float3(0.f, 0.f, -1.f);
     Falcor::float3 cameraTarget = Falcor::float3(0.f);
+    float LIP_CONST = 1.f; // global Lipschitz constant for sphere tracing
 };
 
 enum class DebugMode
@@ -117,17 +119,17 @@ public:
     // Surface settings
     SurfaceType surfaceType = SurfaceType::endrassOctic;
     std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
-        {SurfaceType::barthSextic, {6, {.55, 0., -1.}}},
+        {SurfaceType::barthSextic, {6, {.55, 0., -1.}, Falcor::float3(0.f), 484.55f}},
         {SurfaceType::endrassOctic, {8}},
         {SurfaceType::barthDecic, {10, {0., -.25, -.7}}},
-        {SurfaceType::calyx, {5, {1., 0., -.8}}},
+        {SurfaceType::calyx, {5, {1., 0., -.8}, Falcor::float3(0.f), 7.5498f}},
         {SurfaceType::geisha, {4, {.5, -.5, -.5}, {0., -.3, 0.}}},
         {SurfaceType::calypso, {3, {1., .5, -1.}}},
         {SurfaceType::distel, {6, {1., .5, -1.}}},
-        {SurfaceType::flirt, {4, {1., .5, -1.}}},
+        {SurfaceType::flirt, {4, {1., .5, -1.}, Falcor::float3(0.f), 43.7035f}},
         {SurfaceType::torus, {4, {1., 0., -1.7}}},
         {SurfaceType::buggle, {6, {.2, 1., -2.}}},
-        {SurfaceType::sphere, {2, {0., 0., -2.4}}},
+        {SurfaceType::sphere, {2, {0., 0., -2.4}, Falcor::float3(0.f), 3.4641f}},
         {SurfaceType::sphere16, {16, {2.3, 1., -1.}}},
     };
 
