@@ -9,7 +9,6 @@
 cbuffer PsCB
 {
     float2 iResolution;
-    float iGlobalTime;
     // camera
     float3 iEyePos;
     float3 iEyeTarget;
@@ -160,7 +159,7 @@ Ray generateRay(float2 uv)
         float3 camPos = float3(0.0, 0.0, -2.0 * BOUNDING_SPHERE_RADIUS);
         float3 rayDir = normalize(float3(uv, 1.0)); // 1.5 is the (FOV)
         // Animation
-        float time = iGlobalTime * 0.2;
+        float time = globalTime * 0.2;
         float3x3 camRot = rotateY(time); // mul(rotateY(time), rotateX(time * 0.7));
         ray.origin = mul(camPos, camRot);
         ray.dir = mul(rayDir, camRot);

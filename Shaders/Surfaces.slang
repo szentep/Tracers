@@ -205,4 +205,41 @@ float sphere16(float3 p)
     return (p.x + p.y + p.z) - RN;
 }
 
+// Animated surfaces
+
+// surface A for some time then smooth morpf to surface B, then B for some time, then morph back to A, and so on
+float morph2(float3 p)
+{
+    // Configuration
+    const float MORPH_DURATION = 1.0; // seconds for each morph phase
+    const float HOLD_DURATION = 1.0;  // seconds for each static phase
+
+    float surfaceA = geisha(p);
+    float surfaceB = calyx(p);
+
+    // Switch phases
+    const float TOTAL_DURATION = 2. * (MORPH_DURATION + HOLD_DURATION);
+    float t = fmod(globalTime, TOTAL_DURATION); // loop every 4 phases [0, TOTAL_DURATION]
+
+    if (t < MORPH_DURATION) // A to B
+    {
+        float s = smoothstep(0., 1., t / MORPH_DURATION);
+        return lerp(surfaceA, surfaceB, s);
+    }
+    else if (t < MORPH_DURATION + HOLD_DURATION) // B
+    {
+        return surfaceB;
+    }
+    else if (t < 2. * MORPH_DURATION + HOLD_DURATION) // B to A
+    {
+        t -= MORPH_DURATION + HOLD_DURATION;
+        float s = smoothstep(0., 1., t / MORPH_DURATION);
+        return lerp(surfaceB, surfaceA, s);
+    }
+    else // A
+    {
+        return surfaceA;
+    }
+}
+
 #endif // SURFACES

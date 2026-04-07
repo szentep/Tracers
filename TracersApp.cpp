@@ -66,7 +66,8 @@ void TracersApp::onFrameRender(RenderContext* pRenderContext, const ref<Fbo>& pT
     float width = (float)pTargetFbo->getWidth();
     float height = (float)pTargetFbo->getHeight();
     PsCB["iResolution"] = float2(width, height);
-    PsCB["iGlobalTime"] = (float)getGlobalClock().getTime();
+    // time
+    vars["SettingsCB"]["globalTime"] = (float)getGlobalClock().getTime();
     // Camera
     updateCamera(PsCB);
 

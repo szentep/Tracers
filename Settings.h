@@ -62,6 +62,7 @@ enum class SurfaceType
     buggle,
     sphere,
     sphere16,
+    morph2,
 };
 
 enum class CameraMode
@@ -117,7 +118,7 @@ public:
     float errorThreshold = 0.001f;
 
     // Surface settings
-    SurfaceType surfaceType = SurfaceType::endrassOctic;
+    SurfaceType surfaceType = SurfaceType::morph2;
     std::map<SurfaceType, SurfaceProperties> surfaceProperties = {
         {SurfaceType::barthSextic, {6, {.55, 0., -1.}, Falcor::float3(0.f), 484.55f}},
         {SurfaceType::endrassOctic, {8}},
@@ -131,6 +132,7 @@ public:
         {SurfaceType::buggle, {6, {.2, 1., -2.}}},
         {SurfaceType::sphere, {2, {0., 0., -2.4}, Falcor::float3(0.f), 3.4641f}},
         {SurfaceType::sphere16, {16, {2.3, 1., -1.}}},
+        {SurfaceType::morph2, {5, {2., 0.6, -1.4}}},
     };
 
     // Default window size

@@ -7,8 +7,9 @@
 
 cbuffer SettingsCB
 {
-    float errorThreshold;
+    float errorThreshold; // for root calculation
     float LIP_CONST; // global Lipschitz constant for sphere tracing
+    float globalTime;
 };
 
 #ifndef POLYNOMIAL_DEGREE
